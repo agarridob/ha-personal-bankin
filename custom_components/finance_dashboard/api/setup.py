@@ -512,9 +512,23 @@ class FinanceDashboardSetupCompleteView(HomeAssistantView):
                 }
             )
 
-        except Exception:
+        except Exception as exc:
+            # NOTE: Always returns HTTP 200 with error details in the body —
+            # HA's callApi() throws on non-200 and the wizard catch swallows
+            # the JSON body. See FinanceDashboardSetupInstitutionsView for
+            # the same convention. The frontend inspects error_type.
+            from ..enablebanking_client import RateLimitExceeded
+
+            if isinstance(exc, RateLimitExceeded):
+                _LOGGER.warning("Setup completion blocked by Enable-Banking rate limit")
+                return self.json(
+                    {
+                        "error": "Bank-API tageslimit erreicht — bitte morgen erneut versuchen",
+                        "error_type": "rate_limited",
+                    }
+                )
             _LOGGER.exception("Failed to complete bank setup")
-            return self.json({"error": "Setup completion failed"})
+            return self.json({"error": "Setup completion failed", "error_type": "server_error"})
 
 
 class FinanceDashboardSetupUpdateAccountsView(HomeAssistantView):
