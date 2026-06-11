@@ -115,6 +115,8 @@
   "categorize.uncategorized": "sin categorizar",
   "categorize.drop_here": "Arrastra aquí",
   "categorize.assigned": "$name asignado",
+  "categorize.instructions": "Arrastra movimientos a la categoría correcta. El sistema aprende las reglas nuevas automáticamente.",
+  "categorize.admin_only": "Solo visible para administradores.",
   "budget.title": "Configuración del presupuesto",
   "budget.split_model": "Modelo de reparto",
   "budget.preview": "Vista previa del dinero libre",

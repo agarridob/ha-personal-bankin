@@ -1,5 +1,13 @@
 # Build Log
 
+## 0.15.4 — 2026-06-11
+Version: 0.15.4
+Branch: fix/categorize-i18n
+Changes:
+- fix(frontend): replace hardcoded German instruction text in categorize card with tSync() calls
+- fix(i18n): add categorize.instructions and categorize.admin_only keys to es.json and en.json
+- fix(i18n): cat.groceries, cat.dining, cat.health, cat.leisure were missing from the locale served to tSync — locale files now include all four keys so CAT_LABELS resolves them correctly
+
 ## 0.15.3 — 2026-06-11
 Version: 0.15.3
 Branch: feat/custom-categories

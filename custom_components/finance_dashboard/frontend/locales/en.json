@@ -115,6 +115,8 @@
   "categorize.uncategorized": "uncategorized",
   "categorize.drop_here": "Drop here",
   "categorize.assigned": "$name assigned",
+  "categorize.instructions": "Drag transactions to the correct category. The system learns new rules automatically.",
+  "categorize.admin_only": "Visible to admins only.",
   "budget.title": "Budget configuration",
   "budget.split_model": "Split model",
   "budget.preview": "Spending money preview",
