@@ -44,11 +44,15 @@ export function escHtml(str) {
 export const CAT_COLORS = {
   housing: "#3b82f6",
   loans: "#e74c3c",
-  food: "#f97316",
+  groceries: "#22c55e",
+  dining: "#f97316",
+  food: "#f97316",       // legacy alias for cached transactions
   utilities: "#eab308",
   insurance: "#8b5cf6",
   subscriptions: "#ec4899",
   transport: "#06b6d4",
+  health: "#14b8a6",
+  leisure: "#a78bfa",
   cleaning: "#a855f7",
   income: "#4ecca3",
   transfers: "#6b7280",

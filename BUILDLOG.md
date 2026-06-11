@@ -1,5 +1,16 @@
 # Build Log
 
+## 0.15.3 — 2026-06-11
+Version: 0.15.3
+Branch: feat/custom-categories
+Changes:
+- feat(categorizer): split food into groceries (supermarkets) and dining (restaurants + delivery)
+- feat(categorizer): add health category — farmacia, clinica, dentista, fisio, optica, psicolog, etc.
+- feat(categorizer): add leisure category — cine, teatro, gym, gimnasio, decathlon, ticketmaster, etc.
+- feat(categorizer): keep food as legacy alias in CAT_COLORS and CAT_LABELS so cached transactions still render
+- feat(frontend): update drag&drop card category list to include groceries, dining, health, leisure
+- feat(i18n): add cat.groceries, cat.dining, cat.health, cat.leisure to es.json and en.json
+
 ## 0.15.2 — 2026-06-11
 Version: 0.15.2
 Branch: feat/salary-month-cycle

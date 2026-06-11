@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.15.2"
+VERSION = "0.15.3"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -32,24 +32,31 @@ ENABLEBANKING_RATE_LIMIT_DAILY = 4
 
 # Transaction categorization
 CATEGORY_HOUSING = "housing"
-CATEGORY_FOOD = "food"
+CATEGORY_FOOD = "food"          # legacy alias — kept so cached "food" transactions still resolve
+CATEGORY_GROCERIES = "groceries"
+CATEGORY_DINING = "dining"
 CATEGORY_TRANSPORT = "transport"
 CATEGORY_INSURANCE = "insurance"
 CATEGORY_SUBSCRIPTIONS = "subscriptions"
 CATEGORY_LOANS = "loans"
 CATEGORY_UTILITIES = "utilities"
+CATEGORY_HEALTH = "health"
+CATEGORY_LEISURE = "leisure"
 CATEGORY_INCOME = "income"
 CATEGORY_TRANSFERS = "transfers"
 CATEGORY_OTHER = "other"
 
 DEFAULT_CATEGORIES = [
     CATEGORY_HOUSING,
-    CATEGORY_FOOD,
+    CATEGORY_GROCERIES,
+    CATEGORY_DINING,
     CATEGORY_TRANSPORT,
     CATEGORY_INSURANCE,
     CATEGORY_SUBSCRIPTIONS,
     CATEGORY_LOANS,
     CATEGORY_UTILITIES,
+    CATEGORY_HEALTH,
+    CATEGORY_LEISURE,
     CATEGORY_INCOME,
     CATEGORY_TRANSFERS,
     CATEGORY_OTHER,
@@ -69,7 +76,7 @@ CATEGORIZATION_RULES = {
         "comunidad prop",
         "rent",
     ],
-    CATEGORY_FOOD: [
+    CATEGORY_GROCERIES: [
         "mercadona",
         "carrefour",
         "lidl",
@@ -81,6 +88,12 @@ CATEGORIZATION_RULES = {
         "supercor",
         "gadis",
         "froiz",
+        "dia ",
+        "hipercor",
+        "el corte ingles alimentacion",
+        "el corte inglés alimentación",
+    ],
+    CATEGORY_DINING: [
         "restaurante",
         "restaurant",
         "glovo",
@@ -89,6 +102,14 @@ CATEGORIZATION_RULES = {
         "telepizza",
         "mcdonald",
         "burger king",
+        "dominos",
+        "kfc",
+        "five guys",
+        "bar ",
+        "cafeteria",
+        "cafetería",
+        "heladeria",
+        "heladería",
     ],
     CATEGORY_TRANSPORT: [
         "renfe",
@@ -173,6 +194,43 @@ CATEGORIZATION_RULES = {
         "telefónica",
         "euskaltel",
         "octopus",
+    ],
+    CATEGORY_HEALTH: [
+        "farmacia",
+        "parafarmacia",
+        "clinica",
+        "clínica",
+        "dentista",
+        "fisioterapia",
+        "fisio",
+        "medico",
+        "médico",
+        "hospital",
+        "laboratorio",
+        "optica",
+        "óptica",
+        "psicolog",
+        "nutricion",
+        "nutrición",
+    ],
+    CATEGORY_LEISURE: [
+        "cine",
+        "teatro",
+        "concierto",
+        "entradas",
+        "ticketmaster",
+        "eventbrite",
+        "gym",
+        "gimnasio",
+        "deporte",
+        "decathlon",
+        "bowling",
+        "karting",
+        "escape room",
+        "parque de atracciones",
+        "zoo",
+        "museo",
+        "aquapark",
     ],
     CATEGORY_INCOME: [
         "nomina",

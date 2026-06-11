@@ -2,6 +2,16 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.15.3] — 2026-06-11
+
+### Added
+- Split food into groceries (supermarkets) and dining (restaurants + delivery)
+- Add health category — farmacia, clinica, dentista, fisio, optica, psicolog, etc.
+- Add leisure category — cine, teatro, gym, gimnasio, decathlon, ticketmaster, etc.
+- Keep food as legacy alias in CAT_COLORS and CAT_LABELS so cached transactions still render
+- Update drag&drop card category list to include groceries, dining, health, leisure
+- Add cat.groceries, cat.dining, cat.health, cat.leisure to es.json and en.json
+
 ## [0.15.2] — 2026-06-11
 
 ### Added
