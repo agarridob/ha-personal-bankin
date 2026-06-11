@@ -1,12 +1,28 @@
 <!-- Uses dotclaude-dev-ops plugin + personal ~/.claude/CLAUDE.md -->
 
-# Finance — Home Assistant Integration
+# Personal Bankin — Home Assistant Integration
 
 ## Project Overview
 
 A secure Home Assistant add-on and integration for personal finance management. Pulls live banking data via the Enable Banking PSD2 Open Banking API (JWT-signed), auto-categorizes transactions, and provides household budget tracking with configurable multi-person split models.
 
+This is Alberto's personal fork (agarridob/ha-personal-bankin) of Jerry0022/homeassistant-finance, rebranded "Personal Bankin" and tuned for Spanish banks (Caja Rural de Zamora, BBVA). The internal domain stays `finance_dashboard`.
+
 **Hard rule — cache vs. live fetch**: Cache reads (HTTP endpoints, sensor attributes, coordinator state) are unbounded. Live Enable-Banking calls are ONLY allowed from explicit user-triggered paths (refresh button, service call, setup bootstrap). Enable Banking enforces a 4/day ASPSP rate limit, so background polling is forbidden.
+
+## Working Agreements (Alberto's standing orders)
+
+1. **Language split**: everything that lands in the repo — commit messages, PR titles/bodies, code comments, docs — is written in **English**. Conversation with Alberto is in Spanish.
+2. **Branch + PR workflow**: never commit directly to `main`. Each feature/fix goes on its own branch (`feat/...`, `fix/...`, `chore/...`) with a PR to `main`. Alberto approves merges (he may delegate the merge explicitly).
+3. **Conventional commits**: `feat(scope):`, `fix(scope):`, `chore(scope):` etc. — these prefixes drive the changelog tooling.
+4. **Release flow** (after merging to `main`): add a BUILDLOG.md entry → `python scripts/sync_changelog.py --version X.Y.Z` → tag `vX.Y.Z` on the merge commit → push the tag. The tag-triggered workflow (`.github/workflows/release.yml`) creates the GitHub Release; if Actions are disabled, `gh release create vX.Y.Z` with the CHANGELOG section as notes. HACS must always offer numbered versions, never commit hashes.
+5. **Version bumps**: `python scripts/bump_versions.py --part patch|minor|major` on the feature branch (keeps manifest.json, config.yaml and const.py aligned). Patch for fixes, minor for features.
+6. **Payload sync is mandatory**: after touching anything under `custom_components/`, run `python scripts/sync_addon_payload.py` — CI fails otherwise. Never edit `finance_dashboard_companion/payload/` by hand.
+7. **Local tooling**: the system `python3` is 3.7 — always use `.venv/bin/python` (3.12) for tests and scripts. Tests: `.venv/bin/python -m pytest tests/ -q`. Lint: `.venv/bin/ruff check custom_components/ tests/` + `ruff format`.
+8. **i18n policy**: English is the base language; Spanish (`es`) is the supported translation. German was removed — do not reintroduce it. Every user-visible frontend string goes through `tSync()`/locale files (`frontend/locales/en.json` + `es.json`); HA config-flow strings live in `strings.json` + `translations/en.json` + `translations/es.json` (keep all in sync). No hardcoded UI strings in components or Python.
+9. **Branding**: all icons/logos derive from `custom_components/finance_dashboard/brand/logo-source.png` via `scripts/generate_branding_assets.py` — never hand-edit the generated PNGs.
+10. **Rate-limit discipline when testing**: a live `refresh_transactions` costs 1 of 4 daily Enable Banking calls per account. Prefer cache reads (`/refresh_status`, `/balances`, sensors) for diagnosis; ask before burning quota.
+11. **Frontend gotcha**: panel components load as ES modules with isolated scopes — no implicit shared globals between files (use `window._fd` or per-file constants). Bump the version (cache-busting `?v=`) whenever frontend files change.
 
 ## Architecture
 
@@ -38,7 +54,7 @@ homeassistant-finance/
 │   ├── services.yaml            # Service definitions for HA
 │   ├── strings.json             # UI strings (EN default)
 │   ├── frontend/                # Web components (sidebar panel)
-│   └── translations/            # i18n (en.json, de.json)
+│   └── translations/            # i18n (en.json, es.json)
 ├── finance_dashboard_companion/           # HA Companion Add-on
 │   ├── config.yaml              # Add-on metadata (version, arch)
 │   ├── Dockerfile               # Alpine-based container
