@@ -246,6 +246,10 @@ class FinanceDashboardOptionsFlow(OptionsFlow):
                         "demo_mode",
                         default=self.config_entry.options.get("demo_mode", False),
                     ): bool,
+                    vol.Optional(
+                        "month_start_day",
+                        default=self.config_entry.options.get("month_start_day", 1),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=28)),
                 }
             ),
         )

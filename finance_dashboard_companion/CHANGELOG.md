@@ -9,6 +9,13 @@
 
 
 
+
+## 0.15.2
+- Add configurable month cycle start day — options field `month_start_day` (1–28, default 1) lets users anchor their budget month to their payday instead of the calendar 1st
+- `async_get_monthly_summary` uses `get_month_range()` for cycle-aware date filtering; response includes `cycle_start` / `cycle_end` ISO dates
+- `_compute_household` propagates global `month_start_day` to each `HouseholdMember` (salary_day + month_cycle fields)
+- Translated options label in strings.json, en.json and es.json
+
 ## 0.15.1
 - Parse the real Enable Banking /transactions response — flat transaction list with per-entry status (BOOK/PEND) instead of the GoCardless {booked, pending} shape the code assumed ('list' object has no attribute 'get' crash, transactions never loaded)
 - Apply credit_debit_indicator to amounts — Enable Banking sends unsigned amounts, so debits are now negative as downstream consumers expect
