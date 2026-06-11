@@ -50,6 +50,12 @@ class FinanceDashboardStaticView(HomeAssistantView):
             content_type = "text/css"
         elif filename.endswith(".html"):
             content_type = "text/html"
+        elif filename.endswith(".png"):
+            content_type = "image/png"
+        elif filename.endswith(".svg"):
+            content_type = "image/svg+xml"
+        elif filename.endswith(".json"):
+            content_type = "application/json"
 
         # R12: async file read + mtime-aware LRU cache.
         def _read() -> tuple[int, bytes]:

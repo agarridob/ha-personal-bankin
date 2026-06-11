@@ -325,7 +325,9 @@ class FinanceDashboardPanel extends HTMLElement {
       const needsRebind = this._overlayState !== "onboarding";
       this._showOverlay("onboarding", `
 <div style="text-align:center;padding:60px 20px;max-width:480px;margin:0 auto;">
-  <div style="font-size:48px;margin-bottom:16px;">&#x1F3E6;</div>
+  <img src="/api/finance_dashboard/static/personal-bankin-logo.png" alt=""
+    style="width:96px;height:96px;margin-bottom:16px;border-radius:22px;
+    background:#ededec;padding:10px;box-sizing:border-box;">
   <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">${tSync("panel.onboarding.title")}</h2>
   <p style="color:var(--tx2);margin:0 0 24px;line-height:1.5;">
     ${tSync("panel.onboarding.body")}
