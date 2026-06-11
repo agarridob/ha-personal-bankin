@@ -221,11 +221,11 @@ class FinanceDashboardSetupAuthorizeView(HomeAssistantView):
                 return self.json(
                     {
                         "error": (
-                            "Bank-Autorisierung erfordert HTTPS. Aktuelle "
-                            f"Callback-URL '{callback_url}' ist HTTP — "
-                            "öffne das Finance-Panel über die HTTPS-URL "
-                            "deiner HA-Instanz (z. B. Nabu Casa) oder "
-                            "richte ein TLS-Zertifikat ein."
+                            "Bank authorization requires HTTPS. The current "
+                            f"callback URL '{callback_url}' is HTTP — open "
+                            "the Personal Bankin panel through the HTTPS URL "
+                            "of your HA instance (e.g. Nabu Casa) or set up "
+                            "a TLS certificate."
                         ),
                         "error_type": "callback_not_https",
                         "callback_url": callback_url,
@@ -317,9 +317,9 @@ class FinanceDashboardSetupAuthorizeView(HomeAssistantView):
 
             if "redirect" in exc_msg.lower():
                 error_detail = (
-                    f"Redirect URL nicht registriert — die Callback-URL "
-                    f"'{callback_url}' ist nicht bei Enable Banking "
-                    f"hinterlegt."
+                    f"Redirect URL not registered — the callback URL "
+                    f"'{callback_url}' is not whitelisted in your Enable "
+                    f"Banking application."
                 )
             return self.json({"error": error_detail})
 
@@ -531,7 +531,7 @@ class FinanceDashboardSetupCompleteView(HomeAssistantView):
                 _LOGGER.warning("Setup completion blocked by Enable-Banking rate limit")
                 return self.json(
                     {
-                        "error": "Bank-API tageslimit erreicht — bitte morgen erneut versuchen",
+                        "error": "Bank API daily limit reached — please try again tomorrow",
                         "error_type": "rate_limited",
                     }
                 )
@@ -648,7 +648,7 @@ class FinanceDashboardOAuthCallbackView(HomeAssistantView):
                     accounts = session_data.get("accounts", [])
                     if not accounts:
                         hass.data[DOMAIN]["pending_setup_error"] = (
-                            "Bank hat keine Konten zurückgegeben. Bitte Bankvertrag/Konsent prüfen."
+                            "The bank returned no accounts. Check your bank contract/consent."
                         )
                     else:
                         hass.data[DOMAIN]["pending_accounts"] = accounts
@@ -657,15 +657,15 @@ class FinanceDashboardOAuthCallbackView(HomeAssistantView):
                     from ..enablebanking_client import RateLimitExceeded
 
                     if isinstance(exc, RateLimitExceeded):
-                        hass.data[DOMAIN]["pending_setup_error"] = f"API-Tageslimit erreicht: {exc}"
+                        hass.data[DOMAIN]["pending_setup_error"] = f"API daily limit reached: {exc}"
                     elif isinstance(exc, RuntimeError):
                         hass.data[DOMAIN]["pending_setup_error"] = (
-                            "Keine API-Credentials gespeichert — Integration neu einrichten."
+                            "No API credentials stored — set up the integration again."
                         )
                     else:
                         _LOGGER.exception("Failed to fetch accounts after OAuth callback")
                         hass.data[DOMAIN]["pending_setup_error"] = (
-                            f"Session-Erstellung fehlgeschlagen: {str(exc)[:300]}"
+                            f"Session creation failed: {str(exc)[:300]}"
                         )
             else:
                 # Legacy config flow — resume it
@@ -680,7 +680,7 @@ class FinanceDashboardOAuthCallbackView(HomeAssistantView):
             _LOGGER.warning("OAuth callback received without authorization code")
 
         html = """<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Finance</title>
+<html><head><meta charset="utf-8"><title>Personal Bankin</title>
 <style>
 body { font-family: -apple-system, sans-serif; background: #0a0a0f;
   color: #e8e8ed; display: flex; justify-content: center;
@@ -693,9 +693,9 @@ p { color: #9898a8; font-size: 14px; line-height: 1.6; }
 </style></head><body>
 <div class="card">
   <div class="icon">&#9989;</div>
-  <h1>Bankverbindung erfolgreich</h1>
-  <p>Dein Bankkonto wurde autorisiert.<br>
-  Du kannst diesen Tab schlie&szlig;en und zum Finance zur&uuml;ckkehren.</p>
+  <h1>Bank connected successfully</h1>
+  <p>Your bank account has been authorized.<br>
+  You can close this tab and return to Personal Bankin.</p>
 </div>
 </body></html>"""
 

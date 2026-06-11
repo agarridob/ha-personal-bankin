@@ -248,9 +248,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                         self._rate_limited_until = rl_dt
                         # Mirror to hass.data so the fresh-setup client gate
                         # can enforce the quota even before manager is reached (F2).
-                        self._hass.data.setdefault(DOMAIN, {})[
-                            "_global_rate_limit_until"
-                        ] = rl_dt.isoformat()
+                        self._hass.data.setdefault(DOMAIN, {})["_global_rate_limit_until"] = (
+                            rl_dt.isoformat()
+                        )
                 except ValueError:
                     pass
             stats = cached.get("last_refresh_stats")

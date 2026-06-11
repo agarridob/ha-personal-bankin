@@ -172,7 +172,7 @@ async def _get_setup_client(hass: HomeAssistant):
             now = datetime.now(UTC)
             if rl_dt > now:
                 raise RateLimitExceeded(
-                    f"API rate-limited until {rl_dt.isoformat()} — bitte morgen erneut versuchen."
+                    f"API rate-limited until {rl_dt.isoformat()} — please try again tomorrow."
                 )
         except (ValueError, TypeError):
             # Corrupt timestamp — clear it and proceed

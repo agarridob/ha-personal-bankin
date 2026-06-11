@@ -154,10 +154,10 @@ class FinanceDashboardConfigFlow(ConfigFlow, domain=DOMAIN):
                             pn_async_create(
                                 self.hass,
                                 message=(
-                                    "Öffne das Finance-Panel in der Sidebar, "
-                                    "um deine erste Bank zu verbinden."
+                                    "Open the Personal Bankin panel in the "
+                                    "sidebar to connect your first bank."
                                 ),
-                                title="Finance Dashboard eingerichtet",
+                                title="Personal Bankin set up",
                                 notification_id="fd_setup_complete",
                             )
                             return self.async_create_entry(

@@ -73,9 +73,7 @@ class RefreshMixin:
         # Persist to hass.data so the fresh-setup client gate can read it
         # even when the manager is not consulted directly (F2).
         try:
-            self._hass.data.setdefault(DOMAIN, {})[_GLOBAL_RATE_LIMIT_KEY] = (
-                reset_at.isoformat()
-            )
+            self._hass.data.setdefault(DOMAIN, {})[_GLOBAL_RATE_LIMIT_KEY] = reset_at.isoformat()
         except Exception:  # pragma: no cover
             _LOGGER.debug("Could not write global rate-limit key to hass.data", exc_info=True)
 
@@ -168,7 +166,7 @@ class RefreshMixin:
                 accounts=0,
                 transactions=len(self._transactions),
                 new=0,
-                errors=["Tageslimit der Bank-API erreicht (4/Tag pro Konto)"],
+                errors=["Bank API daily limit reached (4/day per account)"],
             )
             return self._transactions
 
@@ -181,7 +179,7 @@ class RefreshMixin:
                 accounts=0,
                 transactions=len(self._transactions),
                 new=0,
-                errors=["Keine Enable-Banking-Credentials hinterlegt"],
+                errors=["No Enable Banking credentials stored"],
             )
             return []
 
@@ -251,8 +249,8 @@ class RefreshMixin:
                     retry_after_dt = dt_util.now() + timedelta(seconds=_rle.retry_after_seconds)
                 self._set_rate_limited(retry_after_dt)
                 errors.append(
-                    f"Rate-Limit bei {account.get('name', account_id)} — "
-                    "Tageslimit (4/Tag) aufgebraucht"
+                    f"Rate limit hit on {account.get('name', account_id)} — "
+                    "daily quota (4/day) exhausted"
                 )
                 break
             except Exception as exc:
@@ -576,7 +574,7 @@ class RefreshMixin:
         if self.rate_limited_until:
             raise RateLimitExceeded(
                 f"API rate-limited until {self._rate_limited_until.isoformat()} "
-                "— bitte morgen erneut versuchen."
+                "— please try again tomorrow."
             )
 
         if client is None:
