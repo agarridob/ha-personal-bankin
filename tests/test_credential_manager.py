@@ -12,6 +12,7 @@ Tests:
 8. Session timeout flag resets after inactivity threshold is exceeded.
 9. async_get_api_credentials returns None when manager is not initialized.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,6 +21,7 @@ from cryptography.fernet import Fernet
 # ---------------------------------------------------------------------------
 # Minimal stubs for HA dependencies
 # ---------------------------------------------------------------------------
+
 
 class FakeStore:
     """In-memory substitute for homeassistant.helpers.storage.Store."""
@@ -32,12 +34,14 @@ class FakeStore:
 
     async def async_save(self, data):
         import copy
+
         self._data = copy.deepcopy(data)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_manager():
     """Return a CredentialManager with all HA deps fully stubbed out."""

@@ -47,9 +47,7 @@ async def test_refresh_non_admin_gets_403() -> None:
     request = _make_request(is_admin=False)
     response = await view.post(request)
 
-    assert response._status == 403, (
-        f"Expected 403, got {response._status}"
-    )
+    assert response._status == 403, f"Expected 403, got {response._status}"
     assert response._data.get("error") == "admin_required", (
         f"Expected error='admin_required', got {response._data}"
     )
@@ -94,6 +92,4 @@ async def test_refresh_admin_passes_gating() -> None:
         response = await view.post(request)
 
     # Should be 404 (not configured) — NOT 403 (admin gate)
-    assert response._status == 404, (
-        f"Expected 404 (no manager), got {response._status}"
-    )
+    assert response._status == 404, f"Expected 404 (no manager), got {response._status}"

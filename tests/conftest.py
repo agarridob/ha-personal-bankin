@@ -30,6 +30,7 @@ import pytest
 # Windows / pytest-socket compatibility fix
 # ---------------------------------------------------------------------------
 
+
 def pytest_configure(config: pytest.Config) -> None:
     """Undo the HA event loop policy monkey-patch before any tests run.
 
@@ -73,6 +74,7 @@ def event_loop_policy():  # type: ignore[no-untyped-def]
     """
     try:
         import pytest_socket as _ps
+
         _socket_guard_active = True
     except ImportError:
         _ps = None  # type: ignore[assignment]
@@ -104,6 +106,7 @@ def event_loop_policy():  # type: ignore[no-untyped-def]
 # pytest-homeassistant-custom-component: allow loading custom integrations
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def auto_enable_custom_integrations(enable_custom_integrations):  # type: ignore[no-untyped-def]
     """Enable loading of custom integrations.
@@ -118,6 +121,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):  # type: ignore
 # ---------------------------------------------------------------------------
 # Minimal hass stub — for integration tests that need a full HA instance
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_hass(hass):  # type: ignore[no-untyped-def]

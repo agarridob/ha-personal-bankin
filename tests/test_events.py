@@ -37,6 +37,7 @@ def _make_hass() -> MagicMock:
 # fire_transaction_new
 # ---------------------------------------------------------------------------
 
+
 def test_fire_transaction_new_emits_full_payload():
     """Happy path: all fields propagated, event name correct."""
     hass = _make_hass()
@@ -69,6 +70,7 @@ def test_fire_transaction_new_default_account_empty():
 # ---------------------------------------------------------------------------
 # fire_balance_changed
 # ---------------------------------------------------------------------------
+
 
 def test_fire_balance_changed_positive_delta():
     """Happy: salary arrives — new > old → positive change."""
@@ -105,6 +107,7 @@ def test_fire_balance_changed_rounds_to_cents():
 # fire_budget_exceeded
 # ---------------------------------------------------------------------------
 
+
 def test_fire_budget_exceeded_computes_overshoot_and_pct():
     """Happy: 250€ spent against 200€ limit → 25% over."""
     hass = _make_hass()
@@ -139,6 +142,7 @@ def test_fire_budget_exceeded_marginal_overshoot():
 # fire_recurring_detected
 # ---------------------------------------------------------------------------
 
+
 def test_fire_recurring_detected_default_frequency():
     """Happy: monthly is the default."""
     hass = _make_hass()
@@ -163,6 +167,7 @@ def test_fire_recurring_detected_custom_frequency():
 # ---------------------------------------------------------------------------
 # Cross-cut: event-name constants are domain-prefixed
 # ---------------------------------------------------------------------------
+
 
 def test_event_names_are_domain_prefixed():
     """The fd_ prefix matches the documented automation contract."""

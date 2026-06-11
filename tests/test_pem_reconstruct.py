@@ -94,10 +94,6 @@ def test_body_chunked_to_64_chars() -> None:
     body = "A" * 130
     raw = f"-----BEGIN PRIVATE KEY-----\n{body}\n-----END PRIVATE KEY-----"
     result = EnableBankingClient._reconstruct_pem(raw)
-    body_lines = [
-        line
-        for line in result.splitlines()
-        if line and not line.startswith("-----")
-    ]
+    body_lines = [line for line in result.splitlines() if line and not line.startswith("-----")]
     for line in body_lines:
         assert len(line) <= 64, f"Line longer than 64 chars: '{line}'"

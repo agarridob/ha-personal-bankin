@@ -5,15 +5,16 @@ pure-Python with no HA or network dependencies, so we duplicate the patterns
 here for fast, isolated testing. The actual function is also imported and
 tested directly via the regex-only path.
 """
+
 import re
 
 # ---------------------------------------------------------------------------
 # Inline copy of the patterns (ensures test stays in sync with the source)
 # ---------------------------------------------------------------------------
 
-_RE_IBAN = re.compile(r'\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7,25}\b')
-_RE_ACCOUNT_ID = re.compile(r'\b\d{16,19}\b')
-_RE_AMOUNT = re.compile(r'\b\d+[.,]\d{2}\s*(?:EUR|€)\b', re.IGNORECASE)
+_RE_IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7,25}\b")
+_RE_ACCOUNT_ID = re.compile(r"\b\d{16,19}\b")
+_RE_AMOUNT = re.compile(r"\b\d+[.,]\d{2}\s*(?:EUR|€)\b", re.IGNORECASE)
 
 
 def _sanitize_log(text: str) -> str:

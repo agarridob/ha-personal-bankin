@@ -9,6 +9,7 @@ Covers:
 6. Timezone mismatch: UTC-stored state validated with naive timestamp (F3)
 7. Unbounded dict eviction: capped at _OAUTH_STATES_MAX (F5)
 """
+
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -16,6 +17,7 @@ import pytest
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_manager():
     """Return a FinanceDashboardManager with only oauth state fields init'd."""
@@ -61,9 +63,7 @@ async def test_expired_state_rejected():
     state = "old-state"
 
     # Backdate the created timestamp beyond the TTL
-    past = (
-        datetime.now(UTC) - timedelta(seconds=mgr_module._OAUTH_STATE_TTL + 1)
-    ).isoformat()
+    past = (datetime.now(UTC) - timedelta(seconds=mgr_module._OAUTH_STATE_TTL + 1)).isoformat()
     mgr._oauth_states[state] = past
 
     result = await mgr.async_validate_oauth_state(state)

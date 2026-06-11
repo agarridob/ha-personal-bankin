@@ -48,12 +48,12 @@ def _txn(
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("creditor", "Vonovia Wohnungsvermietung GmbH"),
-        ("remittance", "Miete Dezember 2025 WE 34"),
-        ("remittance", "Nebenkosten Abrechnung 2024"),
-        ("creditor", "Hausgeld Eigentümergemeinschaft"),
-        ("remittance", "Kaltmiete Monat November"),
-        ("creditor", "Rent payment Wohnung Berlin"),
+        ("remittance", "Alquiler diciembre 2025 piso calle Mayor"),
+        ("remittance", "Recibo hipoteca cuota noviembre"),
+        ("creditor", "Comunidad de Propietarios Avda Galicia 12"),
+        ("remittance", "CDAD COMUNIDAD PROP CUOTA TRIMESTRE"),
+        ("remittance", "ALQUILER GARAJE ENERO"),
+        ("creditor", "Rent payment apartment Zamora"),
     ],
 )
 def test_housing(field, value):
@@ -73,16 +73,16 @@ def test_housing(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("creditor", "REWE Supermarkt"),
-        ("creditor", "EDEKA Center"),
-        ("creditor", "ALDI SUED"),
-        ("creditor", "Lidl GmbH & Co KG"),
-        ("creditor", "HelloFresh SE"),
-        ("creditor", "Lieferando.de"),
-        ("remittance", "Einkauf Supermarkt"),
-        ("remittance", "Restaurant Essenbei Tisch 4"),
-        ("remittance", "Uber Eats Berlin"),
-        ("creditor", "REWE Markt GmbH"),
+        ("creditor", "MERCADONA SA"),
+        ("creditor", "Carrefour Express"),
+        ("creditor", "ALDI San Roque"),
+        ("creditor", "Lidl Supermercados SAU"),
+        ("creditor", "EROSKI City"),
+        ("creditor", "Glovoapp23 SL"),
+        ("remittance", "Compra supermercado semanal"),
+        ("remittance", "Restaurante Casa Pepe mesa 4"),
+        ("remittance", "Uber Eats Madrid"),
+        ("creditor", "ALCAMPO SA"),
     ],
 )
 def test_food(field, value):
@@ -102,14 +102,14 @@ def test_food(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("remittance", "Deutschlandticket Monatsbeitrag"),
-        ("creditor", "Deutsche Bahn AG"),
-        ("remittance", "DB Fernverkehr Ticket"),
-        ("creditor", "Shell Tankstelle"),
-        ("creditor", "ARAL AG"),
-        ("creditor", "Uber Germany GmbH"),
-        ("remittance", "Taxifahrt Berlin"),
-        ("remittance", "Bahn Ticket S-Bahn"),
+        ("creditor", "RENFE Viajeros SME SA"),
+        ("creditor", "ALSA Grupo SLU"),
+        ("remittance", "Cabify viaje 12/03"),
+        ("creditor", "REPSOL Estacion de Servicio"),
+        ("creditor", "CEPSA Gasolinera A-52"),
+        ("creditor", "Uber BV"),
+        ("remittance", "Taxi aeropuerto"),
+        ("remittance", "Peaje autopista AP-6"),
     ],
 )
 def test_transport(field, value):
@@ -129,13 +129,13 @@ def test_transport(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("creditor", "TK Techniker Krankenkasse"),
-        ("creditor", "AOK Bayern"),
-        ("creditor", "Barmer GEK"),
-        ("remittance", "Haftpflichtversicherung Jahresbeitrag"),
-        ("remittance", "Rechtsschutzversicherung ADAC"),
-        ("remittance", "Krankenversicherung Beitrag"),
-        ("creditor", "Allianz Versicherung"),
+        ("creditor", "MAPFRE España"),
+        ("creditor", "Linea Directa Aseguradora"),
+        ("creditor", "SegurCaixa Adeslas"),
+        ("remittance", "Recibo seguro hogar anual"),
+        ("remittance", "SEGURO COCHE SEMESTRE"),
+        ("creditor", "Sanitas SA de Seguros"),
+        ("creditor", "Allianz Seguros"),
     ],
 )
 def test_insurance(field, value):
@@ -157,12 +157,16 @@ def test_insurance(field, value):
     [
         ("creditor", "Netflix International BV"),
         ("creditor", "Spotify AB"),
-        ("remittance", "Amazon Prime Mitgliedschaft"),
-        ("creditor", "Disney+ Abo"),
+        ("remittance", "Amazon Prime suscripcion"),
+        ("creditor", "Disney Plus"),
         ("remittance", "Xbox Game Pass Ultimate"),
-        ("remittance", "Google One Speicher 200GB"),
-        ("remittance", "iCloud+ Abonnement"),
-        ("remittance", "YouTube Premium Monatsabo"),
+        ("remittance", "Google One 200GB"),
+        ("remittance", "iCloud almacenamiento"),
+        ("remittance", "YouTube Premium mensual"),
+        ("creditor", "HBO Max"),
+        ("creditor", "DAZN Limited"),
+        ("remittance", "APPLE.COM/BILL"),
+        ("remittance", "Movistar Plus+ cuota"),
     ],
 )
 def test_subscriptions(field, value):
@@ -171,9 +175,7 @@ def test_subscriptions(field, value):
         result = cat.categorize(_txn(creditor=value))
     else:
         result = cat.categorize(_txn(remittance=value))
-    assert result == "subscriptions", (
-        f"Expected subscriptions for '{value}', got '{result}'"
-    )
+    assert result == "subscriptions", f"Expected subscriptions for '{value}', got '{result}'"
 
 
 # ---------------------------------------------------------------------------
@@ -184,11 +186,11 @@ def test_subscriptions(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("remittance", "Kreditrate Monat Januar"),
-        ("remittance", "Tilgung Baudarlehen 2024"),
-        ("remittance", "Darlehen Sondertilgung"),
-        ("remittance", "Loan repayment Consorsbank"),
-        ("remittance", "Finanzierung Ratenzahlung"),
+        ("remittance", "Prestamo personal cuota enero"),
+        ("remittance", "AMORTIZACION ANTICIPADA PRESTAMO"),
+        ("remittance", "Financiacion vehiculo cuota 14/48"),
+        ("remittance", "Loan repayment"),
+        ("remittance", "COFIDIS RECIBO MENSUAL"),
     ],
 )
 def test_loans(field, value):
@@ -205,16 +207,16 @@ def test_loans(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("remittance", "EnBW Strom Abschlag Oktober"),
-        ("remittance", "Stromabschlag Monat Oktober"),
-        ("remittance", "Gasrechnung Dezember"),
-        ("remittance", "Wasserversorgung Stadtwerke"),
-        ("creditor", "Deutsche Telekom AG"),
-        ("creditor", "Vodafone GmbH"),
-        ("creditor", "O2 Telefónica Deutschland"),
-        ("remittance", "Rundfunkbeitrag ARD ZDF"),
-        ("remittance", "GEZ Gebühr Halbjahr"),
-        ("remittance", "Fernwärme Abschlag"),
+        ("creditor", "IBERDROLA CLIENTES SAU"),
+        ("creditor", "ENDESA ENERGIA XXI"),
+        ("creditor", "NATURGY IBERIA SA"),
+        ("creditor", "AQUALIA GESTION AGUA"),
+        ("creditor", "Telefonica de España"),
+        ("creditor", "Vodafone España SAU"),
+        ("creditor", "O2 fibra y movil"),
+        ("creditor", "Orange Espagne SAU"),
+        ("creditor", "PEPEPHONE"),
+        ("remittance", "Recibo Movistar fibra octubre"),
     ],
 )
 def test_utilities(field, value):
@@ -234,11 +236,11 @@ def test_utilities(field, value):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("remittance", "Gehalt November 2025 Mustermann GmbH"),
-        ("remittance", "Lohn Dezember"),
+        ("remittance", "NOMINA NOVIEMBRE 2025 EMPRESA SL"),
+        ("remittance", "Nómina diciembre"),
         ("remittance", "Salary payment"),
-        ("remittance", "Vergütung Werkstudent Oktober"),
-        ("remittance", "Überweisung Arbeitgeber"),
+        ("remittance", "Salario octubre"),
+        ("remittance", "PENSION SEGURIDAD SOC"),
     ],
 )
 def test_income_keyword(field, value):
@@ -266,7 +268,7 @@ def test_income_positive_amount_fallback(amount, label):
     """Transactions with no matching keyword but positive amount → income."""
     cat = TransactionCategorizer()
     # Use an unrecognized creditor to avoid keyword matches
-    result = cat.categorize(_txn(creditor="Unbekannter Absender XYZ", amount=amount))
+    result = cat.categorize(_txn(creditor="Remitente Desconocido XYZ", amount=amount))
     assert result == "income", f"Expected income for {label} (amount={amount}), got '{result}'"
 
 
@@ -278,10 +280,10 @@ def test_income_positive_amount_fallback(amount, label):
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("remittance", "Umbuchung Konto 2"),
-        ("remittance", "Übertrag Sparkonto"),
+        ("remittance", "TRANSFERENCIA A CUENTA AHORRO"),
+        ("remittance", "Traspaso entre cuentas"),
         ("remittance", "Transfer to savings account"),
-        ("remittance", "Sparplan ETF monatlich"),
+        ("remittance", "BIZUM ENVIADO A MARIA"),
     ],
 )
 def test_transfers(field, value):
@@ -329,18 +331,14 @@ def test_other_no_text_fields():
 
 def test_custom_rule_adds_keyword():
     """Custom rules injected via constructor must extend category matching."""
-    cat = TransactionCategorizer(
-        custom_rules={"food": ["biomarkt", "demeter"]}
-    )
+    cat = TransactionCategorizer(custom_rules={"food": ["biomarkt", "demeter"]})
     result = cat.categorize(_txn(creditor="Alnatura Biomarkt"))
     assert result == "food"
 
 
 def test_custom_rule_new_category():
     """Custom rules for a previously-unseen category key must work."""
-    cat = TransactionCategorizer(
-        custom_rules={"fitness": ["fitnessstudio", "mcfit", "clever fit"]}
-    )
+    cat = TransactionCategorizer(custom_rules={"fitness": ["fitnessstudio", "mcfit", "clever fit"]})
     result = cat.categorize(_txn(creditor="McFit GmbH"))
     assert result == "fitness"
 
@@ -370,10 +368,10 @@ def test_get_rules_returns_copy():
 @pytest.mark.parametrize(
     "text",
     [
-        "REWE SUPERMARKT",
-        "rewe supermarkt",
-        "Rewe Supermarkt",
-        "rEwE",
+        "MERCADONA SA",
+        "mercadona sa",
+        "Mercadona Sa",
+        "mErCaDoNa",
     ],
 )
 def test_case_insensitive_matching(text):
@@ -399,7 +397,7 @@ def test_remittance_array_matched():
     """remittanceInformationUnstructuredArray entries must all be searched."""
     cat = TransactionCategorizer()
     txn = {
-        "remittanceInformationUnstructuredArray": ["Ref 001", "Miete April", "WE-042"],
+        "remittanceInformationUnstructuredArray": ["Ref 001", "Alquiler abril", "WE-042"],
         "transactionAmount": {"amount": "-700.00"},
     }
     result = cat.categorize(txn)

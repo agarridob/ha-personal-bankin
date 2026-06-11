@@ -26,6 +26,7 @@ from custom_components.finance_dashboard.export import (
 # _write_csv
 # ---------------------------------------------------------------------------
 
+
 def test_write_csv_standard_row(tmp_path: Path):
     """Happy: writes header + one row with all 7 columns populated."""
     fp = tmp_path / "out.csv"
@@ -110,6 +111,7 @@ def test_write_csv_handles_pending_status(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # _cleanup_old_exports
 # ---------------------------------------------------------------------------
+
 
 def test_cleanup_removes_files_older_than_ttl(tmp_path: Path):
     """Happy: stale exports get unlinked, fresh ones survive."""
@@ -197,10 +199,14 @@ def test_cleanup_swallows_valueerror_on_corrupt_mtime(tmp_path: Path, monkeypatc
 
     monkeypatch.setattr(
         "custom_components.finance_dashboard.export.datetime",
-        type("_DT", (), {
-            "fromtimestamp": staticmethod(_bad_fromtimestamp),
-            "now": _dt.datetime.now,
-        }),
+        type(
+            "_DT",
+            (),
+            {
+                "fromtimestamp": staticmethod(_bad_fromtimestamp),
+                "now": _dt.datetime.now,
+            },
+        ),
     )
 
     # Must not raise

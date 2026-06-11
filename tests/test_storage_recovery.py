@@ -47,9 +47,7 @@ async def test_corrupt_storage_does_not_raise() -> None:
         patch(
             "custom_components.finance_dashboard.credential_manager.CredentialManager"
         ) as MockCred,
-        patch(
-            "custom_components.finance_dashboard.categorizer.TransactionCategorizer"
-        ) as MockCat,
+        patch("custom_components.finance_dashboard.categorizer.TransactionCategorizer") as MockCat,
     ):
         mock_cred_inst = AsyncMock()
         MockCred.return_value = mock_cred_inst
@@ -69,12 +67,8 @@ async def test_corrupt_storage_does_not_raise() -> None:
             await mgr.async_initialize()
 
         # Manager must start with empty state
-        assert mgr._transactions == [], (
-            "Expected empty transactions after corrupt storage"
-        )
-        assert mgr._tx_by_account == {}, (
-            "Expected empty tx_by_account after corrupt storage"
-        )
+        assert mgr._transactions == [], "Expected empty transactions after corrupt storage"
+        assert mgr._tx_by_account == {}, "Expected empty tx_by_account after corrupt storage"
 
         # Repair issue must have been raised
         mock_repair.assert_called_once()
@@ -114,9 +108,7 @@ async def test_valid_storage_loads_normally() -> None:
         patch(
             "custom_components.finance_dashboard.credential_manager.CredentialManager"
         ) as MockCred,
-        patch(
-            "custom_components.finance_dashboard.categorizer.TransactionCategorizer"
-        ) as MockCat,
+        patch("custom_components.finance_dashboard.categorizer.TransactionCategorizer") as MockCat,
     ):
         MockCred.return_value = AsyncMock()
         MockCat.return_value = MagicMock()

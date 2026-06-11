@@ -47,9 +47,7 @@ def test_per_account_cache_preserves_stale_on_error() -> None:
     # account_b NOT updated (simulating exception path — stale entry kept)
 
     # Rebuild flat list as _do_refresh would
-    all_transactions = [
-        tx for txs in mgr._tx_by_account.values() for tx in txs
-    ]
+    all_transactions = [tx for txs in mgr._tx_by_account.values() for tx in txs]
 
     assert len(all_transactions) == 2, (
         f"Expected 2 transactions (1 fresh + 1 stale), got {len(all_transactions)}"

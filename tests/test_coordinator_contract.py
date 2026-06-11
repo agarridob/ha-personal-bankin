@@ -23,6 +23,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_mock_manager() -> MagicMock:
     """Return a MagicMock that quacks like FinanceDashboardManager.
 
@@ -65,6 +66,7 @@ def _build_mock_client() -> MagicMock:
 # ---------------------------------------------------------------------------
 # The Guardian tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_never_calls_live_api() -> None:

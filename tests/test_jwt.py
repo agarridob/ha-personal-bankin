@@ -38,6 +38,7 @@ def _make_client(private_pem: str):
     from custom_components.finance_dashboard.enablebanking_client import (
         EnableBankingClient,
     )
+
     return EnableBankingClient(
         application_id=APPLICATION_ID,
         private_key_pem=private_pem,
@@ -200,11 +201,11 @@ class TestJwtGeneration:
             "exp": now - 120,  # already expired
             "jti": "test-expired-jti",
         }
-        private_key = _ser.load_pem_private_key(
-            private_pem.encode(), password=None
-        )
+        private_key = _ser.load_pem_private_key(private_pem.encode(), password=None)
         expired_token = jwt.encode(
-            payload, private_key, algorithm="RS256",
+            payload,
+            private_key,
+            algorithm="RS256",
             headers={"kid": APPLICATION_ID},
         )
 

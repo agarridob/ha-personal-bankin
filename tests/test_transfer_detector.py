@@ -6,7 +6,7 @@ Covers:
 - Manual override (user confirms / rejects a chain)
 - Non-transfer false-positive guard (two equal amounts, different vendors)
 - Confidence scoring (high / medium / low)
-- Refund detection (same creditor, storno keyword)
+- Refund detection (same creditor, refund keyword)
 - enrich_transactions populates _transfer_role correctly
 - get_effective_transactions excludes intermediate / destination legs
 - apply_overrides propagates user decisions
@@ -73,10 +73,8 @@ class TestSimpleTransfer:
 
     def _make_txns(self):
         return [
-            _txn("out-1", "acc-a", -100.00, creditor="Savings account",
-                 account_name="Checking"),
-            _txn("in-1", "acc-b", 100.00, debtor="Checking",
-                 account_name="Savings account"),
+            _txn("out-1", "acc-a", -100.00, creditor="Savings account", account_name="Checking"),
+            _txn("in-1", "acc-b", 100.00, debtor="Checking", account_name="Savings account"),
         ]
 
     def _make_accounts(self):
@@ -86,32 +84,24 @@ class TestSimpleTransfer:
         ]
 
     def test_simple_transfer_detects_one_chain(self):
-        chains, refunds = detect_transfer_chains(
-            self._make_txns(), self._make_accounts()
-        )
+        chains, refunds = detect_transfer_chains(self._make_txns(), self._make_accounts())
         assert len(chains) == 1
         assert len(refunds) == 0
 
     def test_simple_transfer_chain_has_two_legs(self):
-        chains, _ = detect_transfer_chains(
-            self._make_txns(), self._make_accounts()
-        )
+        chains, _ = detect_transfer_chains(self._make_txns(), self._make_accounts())
         chain = chains[0]
         assert len(chain.txn_ids) == 2
 
     def test_simple_transfer_source_and_destination(self):
-        chains, _ = detect_transfer_chains(
-            self._make_txns(), self._make_accounts()
-        )
+        chains, _ = detect_transfer_chains(self._make_txns(), self._make_accounts())
         chain = chains[0]
         assert chain.source_txn_id == "out-1"
         assert chain.destination_txn_id == "in-1"
         assert chain.intermediate_txn_ids == []
 
     def test_simple_transfer_confidence_above_threshold(self):
-        chains, _ = detect_transfer_chains(
-            self._make_txns(), self._make_accounts()
-        )
+        chains, _ = detect_transfer_chains(self._make_txns(), self._make_accounts())
         assert chains[0].total_confidence >= 0.60
 
     def test_simple_transfer_not_detected_across_same_account(self):
@@ -145,15 +135,39 @@ class TestCascadeChain:
         next_day = "2025-02-11"
         return [
             # DKB funds PayPal (leg 1)
-            _txn("dkb-out", "dkb", -39.90, date=base,
-                 creditor="PayPal Europe", account_name="DKB Girokonto"),
-            _txn("pp-in", "paypal", 39.90, date=next_day,
-                 debtor="DKB Girokonto", account_name="PayPal"),
+            _txn(
+                "dkb-out",
+                "dkb",
+                -39.90,
+                date=base,
+                creditor="PayPal Europe",
+                account_name="DKB Girokonto",
+            ),
+            _txn(
+                "pp-in",
+                "paypal",
+                39.90,
+                date=next_day,
+                debtor="DKB Girokonto",
+                account_name="PayPal",
+            ),
             # PayPal pays HelloFresh (leg 2)
-            _txn("pp-out", "paypal", -39.90, date=next_day,
-                 creditor="HelloFresh SE", account_name="PayPal"),
-            _txn("hf-in", "hellofresh", 39.90, date=next_day,
-                 debtor="PayPal", account_name="HelloFresh SE"),
+            _txn(
+                "pp-out",
+                "paypal",
+                -39.90,
+                date=next_day,
+                creditor="HelloFresh SE",
+                account_name="PayPal",
+            ),
+            _txn(
+                "hf-in",
+                "hellofresh",
+                39.90,
+                date=next_day,
+                debtor="PayPal",
+                account_name="HelloFresh SE",
+            ),
         ]
 
     def _make_accounts(self):
@@ -195,10 +209,8 @@ class TestOverride:
 
     def _setup(self):
         txns = [
-            _txn("out-1", "acc-a", -50.00, creditor="acc-b",
-                 account_name="Account A"),
-            _txn("in-1", "acc-b", 50.00, debtor="Account A",
-                 account_name="Account B"),
+            _txn("out-1", "acc-a", -50.00, creditor="acc-b", account_name="Account A"),
+            _txn("in-1", "acc-b", 50.00, debtor="Account A", account_name="Account B"),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, refunds = detect_transfer_chains(txns, accounts)
@@ -252,10 +264,22 @@ class TestFalsePositive:
     def test_same_amount_different_creditors_not_a_transfer(self):
         """Two €50 expenses to different creditors on the same day → no chain."""
         txns = [
-            _txn("rent-1", "acc-a", -50.00, creditor="Max Mustermann",
-                 date="2025-03-01", account_name="Checking"),
-            _txn("rent-2", "acc-b", -50.00, creditor="Erika Musterfrau",
-                 date="2025-03-01", account_name="Savings"),
+            _txn(
+                "rent-1",
+                "acc-a",
+                -50.00,
+                creditor="Max Mustermann",
+                date="2025-03-01",
+                account_name="Checking",
+            ),
+            _txn(
+                "rent-2",
+                "acc-b",
+                -50.00,
+                creditor="Erika Musterfrau",
+                date="2025-03-01",
+                account_name="Savings",
+            ),
         ]
         accounts = [_account("acc-a", "Checking"), _account("acc-b", "Savings")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -264,10 +288,10 @@ class TestFalsePositive:
     def test_amounts_beyond_tolerance_not_linked(self):
         """Amounts differing by more than the tolerance must not match."""
         txns = [
-            _txn("out-1", "acc-a", -100.00, creditor="acc-b",
-                 account_name="Account A"),
-            _txn("in-1", "acc-b", 99.00, debtor="Account A",
-                 account_name="Account B"),  # 1.00 diff > 0.50 tolerance
+            _txn("out-1", "acc-a", -100.00, creditor="acc-b", account_name="Account A"),
+            _txn(
+                "in-1", "acc-b", 99.00, debtor="Account A", account_name="Account B"
+            ),  # 1.00 diff > 0.50 tolerance
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -276,10 +300,22 @@ class TestFalsePositive:
     def test_dates_outside_window_not_linked(self):
         """Transactions more than TRANSFER_TIME_WINDOW_DAYS apart must not link."""
         txns = [
-            _txn("out-1", "acc-a", -100.00, date="2025-01-01",
-                 creditor="acc-b", account_name="Account A"),
-            _txn("in-1", "acc-b", 100.00, date="2025-01-10",
-                 debtor="Account A", account_name="Account B"),
+            _txn(
+                "out-1",
+                "acc-a",
+                -100.00,
+                date="2025-01-01",
+                creditor="acc-b",
+                account_name="Account A",
+            ),
+            _txn(
+                "in-1",
+                "acc-b",
+                100.00,
+                date="2025-01-10",
+                debtor="Account A",
+                account_name="Account B",
+            ),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -288,10 +324,22 @@ class TestFalsePositive:
     def test_pending_transactions_ignored(self):
         """Transactions with _status != 'booked' must be excluded from detection."""
         txns = [
-            _txn("out-1", "acc-a", -100.00, status="pending",
-                 creditor="Account B", account_name="Account A"),
-            _txn("in-1", "acc-b", 100.00, status="pending",
-                 debtor="Account A", account_name="Account B"),
+            _txn(
+                "out-1",
+                "acc-a",
+                -100.00,
+                status="pending",
+                creditor="Account B",
+                account_name="Account A",
+            ),
+            _txn(
+                "in-1",
+                "acc-b",
+                100.00,
+                status="pending",
+                debtor="Account A",
+                account_name="Account B",
+            ),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -309,10 +357,22 @@ class TestConfidenceScoring:
     def test_high_confidence_name_and_same_day(self):
         """Name match + same day → confidence should be well above auto threshold."""
         txns = [
-            _txn("out-1", "acc-a", -200.00, date="2025-04-01",
-                 creditor="Savings Account", account_name="Checking Account"),
-            _txn("in-1", "acc-b", 200.00, date="2025-04-01",
-                 debtor="Checking Account", account_name="Savings Account"),
+            _txn(
+                "out-1",
+                "acc-a",
+                -200.00,
+                date="2025-04-01",
+                creditor="Savings Account",
+                account_name="Checking Account",
+            ),
+            _txn(
+                "in-1",
+                "acc-b",
+                200.00,
+                date="2025-04-01",
+                debtor="Checking Account",
+                account_name="Savings Account",
+            ),
         ]
         accounts = [
             _account("acc-a", "Checking Account"),
@@ -329,10 +389,8 @@ class TestConfidenceScoring:
         No account-name cross-reference, so the ceiling is 0.70 for this case.
         """
         txns = [
-            _txn("out-1", "acc-a", -75.00, date="2025-04-01",
-                 account_name="Account A"),
-            _txn("in-1", "acc-b", 75.00, date="2025-04-01",
-                 account_name="Account B"),
+            _txn("out-1", "acc-a", -75.00, date="2025-04-01", account_name="Account A"),
+            _txn("in-1", "acc-b", 75.00, date="2025-04-01", account_name="Account B"),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -344,12 +402,24 @@ class TestConfidenceScoring:
     def test_category_transfer_boosts_confidence(self):
         """Pre-tagged category='transfers' must increase pair confidence."""
         txns = [
-            _txn("out-1", "acc-a", -300.00, date="2025-04-01",
-                 creditor="Account B", account_name="Account A",
-                 category="transfers"),
-            _txn("in-1", "acc-b", 300.00, date="2025-04-01",
-                 debtor="Account A", account_name="Account B",
-                 category="transfers"),
+            _txn(
+                "out-1",
+                "acc-a",
+                -300.00,
+                date="2025-04-01",
+                creditor="Account B",
+                account_name="Account A",
+                category="transfers",
+            ),
+            _txn(
+                "in-1",
+                "acc-b",
+                300.00,
+                date="2025-04-01",
+                debtor="Account A",
+                account_name="Account B",
+                category="transfers",
+            ),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, _ = detect_transfer_chains(txns, accounts)
@@ -363,15 +433,19 @@ class TestConfidenceScoring:
 
 
 class TestRefundDetection:
-    """Storno / refund matching."""
+    """Refund matching."""
 
     def _make_refund_pair(self):
         return [
-            _txn("orig-1", "acc-a", -49.99, date="2025-01-10",
-                 creditor="amazon marketplace"),
-            _txn("ref-1", "acc-a", 49.99, date="2025-01-20",
-                 creditor="amazon marketplace",
-                 remittance="Storno Bestellung 1234"),
+            _txn("orig-1", "acc-a", -49.99, date="2025-01-10", creditor="amazon marketplace"),
+            _txn(
+                "ref-1",
+                "acc-a",
+                49.99,
+                date="2025-01-20",
+                creditor="amazon marketplace",
+                remittance="Devolucion compra 1234",
+            ),
         ]
 
     def test_refund_detected(self):
@@ -391,8 +465,9 @@ class TestRefundDetection:
         """A positive incoming transaction without a refund keyword must not match."""
         txns = [
             _txn("orig-1", "acc-a", -49.99, creditor="amazon marketplace"),
-            _txn("in-1", "acc-a", 49.99, creditor="amazon marketplace",
-                 remittance="Bonus Zahlung"),  # no storno keyword
+            _txn(
+                "in-1", "acc-a", 49.99, creditor="amazon marketplace", remittance="Pago bonus"
+            ),  # no refund keyword
         ]
         _, refunds = detect_transfer_chains(txns, [_account("acc-a", "Checking")])
         assert len(refunds) == 0
@@ -400,11 +475,15 @@ class TestRefundDetection:
     def test_refund_before_original_not_detected(self):
         """Refund must come AFTER the original purchase."""
         txns = [
-            _txn("orig-1", "acc-a", -49.99, date="2025-01-20",
-                 creditor="amazon marketplace"),
-            _txn("ref-1", "acc-a", 49.99, date="2025-01-10",  # 10 days BEFORE
-                 creditor="amazon marketplace",
-                 remittance="Storno Bestellung"),
+            _txn("orig-1", "acc-a", -49.99, date="2025-01-20", creditor="amazon marketplace"),
+            _txn(
+                "ref-1",
+                "acc-a",
+                49.99,
+                date="2025-01-10",  # 10 days BEFORE
+                creditor="amazon marketplace",
+                remittance="Devolucion compra",
+            ),
         ]
         _, refunds = detect_transfer_chains(txns, [_account("acc-a", "Checking")])
         assert len(refunds) == 0
@@ -420,10 +499,8 @@ class TestEnrichTransactions:
 
     def test_source_role_set(self):
         txns = [
-            _txn("out-1", "acc-a", -100.00, creditor="Account B",
-                 account_name="Account A"),
-            _txn("in-1", "acc-b", 100.00, debtor="Account A",
-                 account_name="Account B"),
+            _txn("out-1", "acc-a", -100.00, creditor="Account B", account_name="Account A"),
+            _txn("in-1", "acc-b", 100.00, debtor="Account A", account_name="Account B"),
         ]
         accounts = [_account("acc-a", "Account A"), _account("acc-b", "Account B")]
         chains, refunds = detect_transfer_chains(txns, accounts)
@@ -445,11 +522,15 @@ class TestEnrichTransactions:
 
     def test_refund_fields_populated(self):
         txns = [
-            _txn("orig-1", "acc-a", -49.99, date="2025-01-10",
-                 creditor="amazon marketplace"),
-            _txn("ref-1", "acc-a", 49.99, date="2025-01-20",
-                 creditor="amazon marketplace",
-                 remittance="Storno Bestellung 1234"),
+            _txn("orig-1", "acc-a", -49.99, date="2025-01-10", creditor="amazon marketplace"),
+            _txn(
+                "ref-1",
+                "acc-a",
+                49.99,
+                date="2025-01-20",
+                creditor="amazon marketplace",
+                remittance="Devolucion compra 1234",
+            ),
         ]
         accounts = [_account("acc-a", "Checking")]
         chains, refunds = detect_transfer_chains(txns, accounts)
