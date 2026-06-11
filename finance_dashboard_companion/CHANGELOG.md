@@ -11,6 +11,12 @@
 
 
 
+
+## 0.15.4
+- Replace hardcoded German instruction text in categorize card with tSync() calls
+- Add categorize.instructions and categorize.admin_only keys to es.json and en.json
+- Cat.groceries, cat.dining, cat.health, cat.leisure were missing from the locale served to tSync — locale files now include all four keys so CAT_LABELS resolves them correctly
+
 ## 0.15.3
 - Split food into groceries (supermarkets) and dining (restaurants + delivery)
 - Add health category — farmacia, clinica, dentista, fisio, optica, psicolog, etc.

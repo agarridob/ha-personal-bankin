@@ -61,8 +61,8 @@ class FdCategorize extends HTMLElement {
 </style>
 <div class="fdc" id="fdc">
   <div class="fdc-info">
-    Ziehe Transaktionen in die passende Kategorie. Das System lernt neue Zuordnungsregeln automatisch.
-    <strong>Nur f&uuml;r Admins sichtbar.</strong>
+    <span id="fdc-instructions"></span>
+    <strong id="fdc-admin-only"></strong>
   </div>
   <div class="fdc-grid">
     <div class="fdc-txns" id="txnList"></div>
@@ -75,11 +75,16 @@ class FdCategorize extends HTMLElement {
 
   async _load() {
     if (!this._hass) return;
+    const t = window._fd.tSync;
+    const instrEl = this.querySelector("#fdc-instructions");
+    const adminEl = this.querySelector("#fdc-admin-only");
+    if (instrEl) instrEl.textContent = t("categorize.instructions");
+    if (adminEl) adminEl.textContent = t("categorize.admin_only");
     try {
       const data = await this._hass.callApi("GET", "finance_dashboard/transactions");
       if (data.privacy === "aggregate_only") {
         this.querySelector("#fdc").innerHTML =
-          `<div class="fdc-none">${window._fd.tSync("categorize.admin_required")}</div>`;
+          `<div class="fdc-none">${t("categorize.admin_required")}</div>`;
         return;
       }
       this._renderTransactions(data.transactions || []);
