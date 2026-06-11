@@ -165,6 +165,16 @@ class FinanceDashboardConfigFlow(ConfigFlow, domain=DOMAIN):
                                 data={"configured": False},
                             )
 
+        from homeassistant.helpers.network import NoURLAvailableError, get_url
+
+        # Banks only accept HTTPS redirect URLs, so prefer the external URL.
+        # When HA cannot determine any URL (fresh install, "Automatic"
+        # network settings), show a readable placeholder instead of "None".
+        try:
+            base_url = get_url(self.hass, prefer_external=True)
+        except NoURLAvailableError:
+            base_url = "https://<your-home-assistant-url>"
+
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -183,10 +193,7 @@ class FinanceDashboardConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={
                 "enablebanking_url": "https://enablebanking.com",
-                "redirect_url": (
-                    f"{self.hass.config.external_url or self.hass.config.internal_url}"
-                    f"/api/{DOMAIN}/oauth/callback"
-                ),
+                "redirect_url": f"{base_url}/api/{DOMAIN}/oauth/callback",
             },
         )
 
