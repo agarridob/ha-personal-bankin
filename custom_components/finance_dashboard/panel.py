@@ -14,28 +14,33 @@ from .const import (
     PANEL_MODULE_PATH,
     PANEL_TITLE,
     PANEL_URL_PATH,
+    VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 STATIC_BASE = f"/api/{DOMAIN}/static"
+# ?v= busts the 1h browser cache (Cache-Control on the static view) on updates
 LOVELACE_COMPONENTS = [
-    f"{STATIC_BASE}/fd-shared-styles.js",
-    f"{STATIC_BASE}/fd-data-provider.js",
-    f"{STATIC_BASE}/fd-stat-card.js",
-    f"{STATIC_BASE}/fd-person-card.js",
-    f"{STATIC_BASE}/fd-donut-chart.js",
-    f"{STATIC_BASE}/fd-header.js",
-    f"{STATIC_BASE}/fd-stats-row.js",
-    f"{STATIC_BASE}/fd-household-section.js",
-    f"{STATIC_BASE}/fd-category-section.js",
-    f"{STATIC_BASE}/fd-cost-distribution.js",
-    f"{STATIC_BASE}/fd-recurring-list.js",
-    f"{STATIC_BASE}/fd-transactions-log.js",
-    f"{STATIC_BASE}/fd-budget-config.js",
-    f"{STATIC_BASE}/fd-categorize.js",
-    f"{STATIC_BASE}/fd-setup-wizard.js",
-    f"{STATIC_BASE}/finance-status-chip.js",
+    f"{STATIC_BASE}/{name}?v={VERSION}"
+    for name in (
+        "fd-shared-styles.js",
+        "fd-data-provider.js",
+        "fd-stat-card.js",
+        "fd-person-card.js",
+        "fd-donut-chart.js",
+        "fd-header.js",
+        "fd-stats-row.js",
+        "fd-household-section.js",
+        "fd-category-section.js",
+        "fd-cost-distribution.js",
+        "fd-recurring-list.js",
+        "fd-transactions-log.js",
+        "fd-budget-config.js",
+        "fd-categorize.js",
+        "fd-setup-wizard.js",
+        "finance-status-chip.js",
+    )
 ]
 
 

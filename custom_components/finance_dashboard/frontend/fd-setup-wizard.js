@@ -20,7 +20,9 @@
  *   fd-setup-closed   — Wizard closed (cancel or success)
  */
 
-// DOMAIN is declared by fd-data-provider.js (loaded first, shared global scope)
+// Components are loaded as ES modules — each file has its own scope,
+// so DOMAIN must be declared here (it is NOT shared from fd-data-provider.js).
+const DOMAIN = "finance_dashboard";
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_MS = 300000; // 5 minutes
 
@@ -133,10 +135,12 @@ class FdSetupWizard extends HTMLElement {
         this._filteredInstitutions = this._institutions;
       }
     } catch (e) {
-      this._error = window._fd.tSync("wizard.step.1.loading");
+      console.error("fd-setup-wizard: failed to load institutions:", e);
+      this._error = (e && (e.error || e.message)) || String(e);
+    } finally {
+      this._loading = false;
+      this._renderContent();
     }
-    this._loading = false;
-    this._renderContent();
   }
 
   async _loadUsers() {
@@ -172,7 +176,8 @@ class FdSetupWizard extends HTMLElement {
       // Start polling for callback completion
       this._startPolling();
     } catch (e) {
-      this._error = window._fd.tSync("wizard.step.2.loading");
+      console.error("fd-setup-wizard: authorize failed:", e);
+      this._error = (e && (e.error || e.message)) || String(e);
       this._loading = false;
       this._renderContent();
     }
@@ -286,7 +291,8 @@ class FdSetupWizard extends HTMLElement {
         composed: true,
       }));
     } catch (e) {
-      this._error = window._fd.tSync("wizard.step.3.connect");
+      console.error("fd-setup-wizard: setup completion failed:", e);
+      this._error = (e && (e.error || e.message)) || String(e);
       this._loading = false;
       this._renderContent();
     }
