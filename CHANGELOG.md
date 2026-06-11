@@ -2,6 +2,19 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.15.1] — 2026-06-11
+
+### Added
+- Follow continuation_key pagination on /transactions (capped at 20 pages) so long date windows return all transactions
+
+### Changed
+- Test: +6 unit tests pinning the Enable Banking response parsing (203 total)
+
+### Fixed
+- Parse the real Enable Banking /transactions response — flat transaction list with per-entry status (BOOK/PEND) instead of the GoCardless {booked, pending} shape the code assumed ('list' object has no attribute 'get' crash, transactions never loaded)
+- Apply credit_debit_indicator to amounts — Enable Banking sends unsigned amounts, so debits are now negative as downstream consumers expect
+- Join list-typed remittance_information into a single string
+
 ## [0.15.0] — 2026-06-11
 
 ### Added
