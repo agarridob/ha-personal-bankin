@@ -12,6 +12,11 @@
 
 
 
+
+## 0.15.5
+- Remove manual __init__ from OptionsFlow — HA 2024.4+ sets config_entry as a read-only property, causing 500 on options form open
+- Add missing demo_mode key to strings.json, en.json and es.json so options form renders all fields
+
 ## 0.15.4
 - Replace hardcoded German instruction text in categorize card with tSync() calls
 - Add categorize.instructions and categorize.admin_only keys to es.json and en.json

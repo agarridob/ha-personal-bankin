@@ -203,15 +203,11 @@ class FinanceDashboardConfigFlow(ConfigFlow, domain=DOMAIN):
         config_entry: ConfigEntry,
     ) -> FinanceDashboardOptionsFlow:
         """Get the options flow for this handler."""
-        return FinanceDashboardOptionsFlow(config_entry)
+        return FinanceDashboardOptionsFlow()
 
 
 class FinanceDashboardOptionsFlow(OptionsFlow):
     """Handle options for Finance."""
-
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""

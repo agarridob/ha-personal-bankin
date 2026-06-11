@@ -31,6 +31,7 @@
           "currency": "Moneda",
           "enable_total_balance_sensor": "Activar sensor de saldo total",
           "enable_dashboard_panel": "Mostrar panel lateral",
+          "demo_mode": "Modo demo (usar datos de ejemplo)",
           "month_start_day": "Día de inicio del ciclo mensual (1 = mes calendario)",
           "transfer_detection_enabled": "Detección de cadenas de transferencias",
           "transfer_amount_tolerance": "Tolerancia de importe (EUR)",

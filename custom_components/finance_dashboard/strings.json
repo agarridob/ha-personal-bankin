@@ -31,6 +31,7 @@
           "currency": "Currency",
           "enable_total_balance_sensor": "Enable total balance sensor",
           "enable_dashboard_panel": "Show sidebar panel",
+          "demo_mode": "Demo mode (use sample data)",
           "month_start_day": "Month cycle start day (1 = calendar month)",
           "transfer_detection_enabled": "Transfer chain detection",
           "transfer_amount_tolerance": "Amount tolerance (EUR)",

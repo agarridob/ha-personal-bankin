@@ -2,6 +2,12 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.15.5] — 2026-06-12
+
+### Fixed
+- Remove manual __init__ from OptionsFlow — HA 2024.4+ sets config_entry as a read-only property, causing 500 on options form open
+- Add missing demo_mode key to strings.json, en.json and es.json so options form renders all fields
+
 ## [0.15.4] — 2026-06-11
 
 ### Fixed
