@@ -21,6 +21,8 @@ STORAGE_VERSION = 1
 
 # Enable Banking
 ENABLEBANKING_BASE_URL = "https://api.enablebanking.com"
+# Fallback when the HA core country setting is not configured
+DEFAULT_COUNTRY = "DE"
 # Sandbox uses a different app registration
 ENABLEBANKING_SANDBOX_URL = "https://api.enablebanking.com"
 TOKEN_MAX_AGE_DAYS = 90  # Force re-auth after 90 days (our own policy)

@@ -25,7 +25,7 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .const import DOMAIN
+from .const import DEFAULT_COUNTRY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -109,7 +109,9 @@ class FinanceDashboardConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "invalid_key_format"
                 else:
                     try:
-                        institutions = await client.async_get_institutions("DE")
+                        institutions = await client.async_get_institutions(
+                            self.hass.config.country or DEFAULT_COUNTRY
+                        )
                     except aiohttp.ClientResponseError as exc:
                         _LOGGER.error(
                             "Enable Banking API rejected request: HTTP %s — %s",

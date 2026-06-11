@@ -25,7 +25,7 @@ import aiohttp
 import jwt
 from cryptography.hazmat.primitives import serialization
 
-from .const import ENABLEBANKING_BASE_URL, VERSION
+from .const import DEFAULT_COUNTRY, ENABLEBANKING_BASE_URL, VERSION
 
 # Type alias for optional injected session
 _SessionType = aiohttp.ClientSession | None
@@ -165,13 +165,13 @@ class EnableBankingClient:
         Returns True if the API responds successfully, False otherwise.
         """
         try:
-            institutions = await self.async_get_institutions("DE")
+            institutions = await self.async_get_institutions()
             return isinstance(institutions, list)
         except Exception:
             _LOGGER.exception("Enable Banking connection test failed")
             return False
 
-    async def async_get_institutions(self, country: str = "DE") -> list[dict[str, Any]]:
+    async def async_get_institutions(self, country: str = DEFAULT_COUNTRY) -> list[dict[str, Any]]:
         """Get available banks (ASPSPs) for a country.
 
         Args:

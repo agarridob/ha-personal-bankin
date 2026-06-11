@@ -12,9 +12,20 @@ from datetime import UTC, datetime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from ..const import DOMAIN
+from ..const import DEFAULT_COUNTRY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _get_country(hass: HomeAssistant) -> str:
+    """ISO 3166-1 alpha-2 country for Enable Banking ASPSP lookups.
+
+    Uses the HA core country setting (Settings > System > General) so the
+    bank list matches the user's market, falling back to DEFAULT_COUNTRY
+    when the instance has no country configured.
+    """
+    return hass.config.country or DEFAULT_COUNTRY
+
 
 # OAuth state token TTL in seconds (10 minutes) — must match manager.py
 _OAUTH_STATE_TTL = 600
@@ -161,8 +172,7 @@ async def _get_setup_client(hass: HomeAssistant):
             now = datetime.now(UTC)
             if rl_dt > now:
                 raise RateLimitExceeded(
-                    f"API rate-limited until {rl_dt.isoformat()} "
-                    "— bitte morgen erneut versuchen."
+                    f"API rate-limited until {rl_dt.isoformat()} — bitte morgen erneut versuchen."
                 )
         except (ValueError, TypeError):
             # Corrupt timestamp — clear it and proceed

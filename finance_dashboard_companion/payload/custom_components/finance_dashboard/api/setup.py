@@ -15,7 +15,13 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 
 from ..const import DOMAIN, SESSION_MAX_DAYS
-from ._helpers import _get_manager, _get_setup_client, _register_oauth_state, _validate_oauth_state
+from ._helpers import (
+    _get_country,
+    _get_manager,
+    _get_setup_client,
+    _register_oauth_state,
+    _validate_oauth_state,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,20 +105,21 @@ class FinanceDashboardSetupUsersView(HomeAssistantView):
 
 
 class FinanceDashboardSetupInstitutionsView(HomeAssistantView):
-    """List available banking institutions for DE."""
+    """List available banking institutions for the configured country."""
 
     url = f"/api/{DOMAIN}/setup/institutions"
     name = f"api:{DOMAIN}:setup_institutions"
     requires_auth = True
 
     async def get(self, request: web.Request) -> web.Response:
-        """Fetch DE bank list from Enable Banking API.
+        """Fetch the bank list for the configured country from Enable Banking API.
 
         Always returns HTTP 200 with error details in the body so the
         frontend can inspect error_type reliably.  HA's callApi() throws
         on non-200 responses, swallowing the JSON body.
         """
         hass = request.app["hass"]
+        country = _get_country(hass)
 
         try:
             from ..enablebanking_client import RateLimitExceeded
@@ -124,10 +131,10 @@ class FinanceDashboardSetupInstitutionsView(HomeAssistantView):
             client = await _get_setup_client(hass)
             if manager is not None:
                 institutions = await manager.async_make_setup_call(
-                    "async_get_institutions", "DE", client=client
+                    "async_get_institutions", country, client=client
                 )
             else:
-                institutions = await client.async_get_institutions("DE")
+                institutions = await client.async_get_institutions(country)
             _LOGGER.debug(
                 "Fetched %d institutions from Enable Banking",
                 len(institutions),
@@ -237,12 +244,13 @@ class FinanceDashboardSetupAuthorizeView(HomeAssistantView):
             # Route through manager.async_make_setup_call when available so
             # the rate-limit gate is enforced centrally (F4).
             manager = _get_manager(hass)
+            country = _get_country(hass)
             if manager is not None:
                 auth_data = await manager.async_make_setup_call(
                     "async_create_auth",
                     client=client,
                     aspsp_name=institution_name,
-                    aspsp_country="DE",
+                    aspsp_country=country,
                     redirect_url=callback_url,
                     valid_until=valid_until,
                     state=state,
@@ -250,7 +258,7 @@ class FinanceDashboardSetupAuthorizeView(HomeAssistantView):
             else:
                 auth_data = await client.async_create_auth(
                     aspsp_name=institution_name,
-                    aspsp_country="DE",
+                    aspsp_country=country,
                     redirect_url=callback_url,
                     valid_until=valid_until,
                     state=state,
