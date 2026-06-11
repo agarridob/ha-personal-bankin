@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.13.4"
+VERSION = "0.14.0"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -190,10 +190,15 @@ CATEGORIZATION_RULES = {
     ],
 }
 
+# Custom categorization rules — user-added keywords persisted in .storage/
+STORAGE_KEY_CUSTOM_RULES = f"{DOMAIN}_custom_rules"
+
 # Services
 SERVICE_REFRESH_ACCOUNTS = "refresh_accounts"
 SERVICE_REFRESH_TRANSACTIONS = "refresh_transactions"
 SERVICE_CATEGORIZE = "categorize_transactions"
+SERVICE_ADD_RULE = "add_categorization_rule"
+SERVICE_REMOVE_RULE = "remove_categorization_rule"
 SERVICE_GET_BALANCE = "get_balance"
 SERVICE_GET_SUMMARY = "get_monthly_summary"
 SERVICE_SET_BUDGET_LIMIT = "set_budget_limit"

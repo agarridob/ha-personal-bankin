@@ -34,6 +34,7 @@ from homeassistant.util import dt as dt_util
 from ..const import (
     DOMAIN,
     ENABLEBANKING_RATE_LIMIT_DAILY,
+    STORAGE_KEY_CUSTOM_RULES,
     STORAGE_KEY_TRANSFER_OVERRIDES,
 )
 from ..household import HouseholdMember, HouseholdModel
@@ -81,6 +82,10 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._rate_limited_until: datetime | None = None
         self._transfer_override_store = Store(hass, 1, STORAGE_KEY_TRANSFER_OVERRIDES)
         self._transfer_overrides: dict[str, bool] = {}
+        # User-added categorization keywords: category → [keywords].
+        # Persisted in .storage/ and merged on top of the built-in rules.
+        self._custom_rules_store = Store(hass, 1, STORAGE_KEY_CUSTOM_RULES)
+        self._custom_rules: dict[str, list[str]] = {}
         self._recurring_patterns: list[dict[str, Any]] = []
         self._previous_balances: dict[str, float] = {}
         self._demo_mode: bool = False
@@ -181,7 +186,24 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._credential_manager = CredentialManager(self._hass)
         await self._credential_manager.async_initialize()
 
-        self._categorizer = TransactionCategorizer()
+        # Load user-added categorization keywords — a corrupt or missing
+        # file must never block startup; fall back to built-in rules only.
+        try:
+            stored_rules = await self._custom_rules_store.async_load()
+            if isinstance(stored_rules, dict):
+                self._custom_rules = {
+                    str(cat): [str(kw) for kw in kws]
+                    for cat, kws in stored_rules.items()
+                    if isinstance(kws, list)
+                }
+        except (json.JSONDecodeError, ValueError, OSError) as exc:
+            _LOGGER.error(
+                "Custom rules store corrupt (%s: %s) — using built-in rules only",
+                type(exc).__name__,
+                exc,
+            )
+
+        self._categorizer = TransactionCategorizer(custom_rules=self._custom_rules or None)
 
         # Load cached transactions from .storage/
         # R8: wrap in try/except — a corrupt .storage/ file must not crash
@@ -473,6 +495,57 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             txn["category"] = self._categorizer.categorize(txn)
         await self._persist_transactions()
         _LOGGER.info("Re-categorized %d transactions", len(self._transactions))
+
+    def get_custom_rules(self) -> dict[str, list[str]]:
+        """Return a copy of the user-added categorization keywords."""
+        return {cat: list(kws) for cat, kws in self._custom_rules.items()}
+
+    async def async_add_categorization_rule(self, category: str, keyword: str) -> dict[str, Any]:
+        """Persist a user-added categorization keyword and re-categorize the cache.
+
+        Keywords are stored lowercase (matching is a lowercased substring
+        check). Returns the updated custom-rules dict so service callers
+        can surface it as a response.
+        """
+        category = category.strip().lower()
+        keyword = keyword.strip().lower()
+        if not category or not keyword:
+            raise ValueError("category and keyword must be non-empty")
+
+        keywords = self._custom_rules.setdefault(category, [])
+        if keyword not in keywords:
+            keywords.append(keyword)
+            await self._custom_rules_store.async_save(self._custom_rules)
+            self._rebuild_categorizer()
+            await self.async_categorize_transactions()
+            _LOGGER.info("Custom rule added: %s → %s", keyword, category)
+        return {"custom_rules": self.get_custom_rules()}
+
+    async def async_remove_categorization_rule(self, category: str, keyword: str) -> dict[str, Any]:
+        """Remove a user-added keyword (built-in rules are not affected)."""
+        category = category.strip().lower()
+        keyword = keyword.strip().lower()
+
+        keywords = self._custom_rules.get(category, [])
+        if keyword in keywords:
+            keywords.remove(keyword)
+            if not keywords:
+                self._custom_rules.pop(category, None)
+            await self._custom_rules_store.async_save(self._custom_rules)
+            self._rebuild_categorizer()
+            await self.async_categorize_transactions()
+            _LOGGER.info("Custom rule removed: %s → %s", keyword, category)
+        return {"custom_rules": self.get_custom_rules()}
+
+    def _rebuild_categorizer(self) -> None:
+        """Recreate the categorizer from built-in + current custom rules.
+
+        Needed because TransactionCategorizer.update_rules() can only add
+        keywords — removal requires a fresh instance.
+        """
+        from ..categorizer import TransactionCategorizer
+
+        self._categorizer = TransactionCategorizer(custom_rules=self._custom_rules or None)
 
     async def async_set_budget_limit(self, category: str, limit: float) -> None:
         """Set a budget limit for a category via the Number entity."""

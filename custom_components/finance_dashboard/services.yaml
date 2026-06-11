@@ -48,6 +48,70 @@ categorize_transactions:
   name: Categorize Transactions
   description: Re-run auto-categorization on all cached transactions.
 
+add_categorization_rule:
+  name: Add Categorization Rule
+  description: >-
+    Add a custom keyword for a spending category. The keyword is stored
+    persistently, merged with the built-in rules, and all cached
+    transactions are re-categorized immediately. Matching is a
+    case-insensitive substring check.
+  fields:
+    category:
+      name: Category
+      description: The spending category the keyword maps to.
+      required: true
+      selector:
+        select:
+          custom_value: true
+          options:
+            - housing
+            - food
+            - transport
+            - insurance
+            - subscriptions
+            - loans
+            - utilities
+            - income
+            - transfers
+            - other
+    keyword:
+      name: Keyword
+      description: Text to match in the transaction (merchant name, concept...).
+      required: true
+      selector:
+        text:
+
+remove_categorization_rule:
+  name: Remove Categorization Rule
+  description: >-
+    Remove a previously added custom keyword. Built-in rules are not
+    affected. Cached transactions are re-categorized immediately.
+  fields:
+    category:
+      name: Category
+      description: The spending category the keyword belongs to.
+      required: true
+      selector:
+        select:
+          custom_value: true
+          options:
+            - housing
+            - food
+            - transport
+            - insurance
+            - subscriptions
+            - loans
+            - utilities
+            - income
+            - transfers
+            - other
+    keyword:
+      name: Keyword
+      description: The exact custom keyword to remove.
+      required: true
+      selector:
+        text:
+
 set_budget_limit:
   name: Set Budget Limit
   description: Set a monthly budget limit for a spending category.
