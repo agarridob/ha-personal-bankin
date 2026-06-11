@@ -2,6 +2,65 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.15.0] — 2026-06-11
+
+### Added
+- Derive all branding assets from the Personal Bankin logo (brand/logo-source.png) — transparent light/dark icon and logo variants, companion add-on icons, frontend copy
+- Panel onboarding screen shows the Personal Bankin logo instead of the bank emoji
+
+### Changed
+- Generate_branding_assets.py derives assets from the source image instead of rendering the smiley-coin from scratch
+
+### Fixed
+- Static view serves correct content types for png/svg/json (previously everything as JavaScript)
+
+## [0.14.1] — 2026-06-11
+
+### Fixed
+- Register a coroutine listener for the initial cache load — recent HA cores reject creating tasks from a lambda off the event loop, which aborted the load and left the panel empty after every restart
+
+## [0.14.0] — 2026-06-11
+
+### Added
+- Persist user-added categorization keywords in .storage/finance_dashboard_custom_rules, loaded on startup and merged on top of the built-in rules
+- New add_categorization_rule / remove_categorization_rule services (category + keyword, response returns current custom rules) — adding or removing rebuilds the categorizer and re-categorizes the cache immediately
+- The drag&drop categorize card persists assignments via add_categorization_rule (previously session-only)
+
+### Changed
+- Test: +8 unit tests for custom rules persistence (197 total)
+
+## [0.13.4] — 2026-06-11
+
+### Added
+- Spanish default keyword rules (Mercadona, alquiler, Iberdrola, nómina...) replacing the German set, keeping international merchants; accented keywords listed in both forms
+- Refund keywords moved to Spanish banking terms (devolución, reembolso, retrocesión) plus refund/reversal/chargeback
+- Demo mode generates Spanish accounts (Caja Rural de Zamora, BBVA) and merchants
+
+### Changed
+- Test: categorizer and transfer-detector suites reparametrized with Spanish examples
+
+## [0.13.3] — 2026-06-11
+
+### Added
+- Full Spanish locale for the panel (locales/es.json) and the HA config flow (translations/es.json); supported languages now en/es
+- Panel header title renamed to Personal Bankin
+
+### Changed
+- German locale files removed (English base, Spanish UI)
+
+### Fixed
+- All hardcoded German strings in panel components routed through the tSync() locale system (stat cards, donut chart, person cards, category section, status chip, categorize and budget cards); category labels resolve via cat.* locale keys
+
+## [0.13.2] — 2026-06-11
+
+### Fixed
+- Declare DOMAIN in fd-setup-wizard module scope — components load as ES modules with isolated scopes, so the wizard crashed with a swallowed ReferenceError before ever calling the API (bank list permanently stuck on loading)
+- Wizard catch handlers surface real error messages (e.error/e.message + console.error) instead of unrelated i18n loading strings; loading reset moved into finally
+- Component script URLs carry ?v= cache busting (static view serves them with 1h Cache-Control)
+- Setup help shows the real HA URL via helpers.network.get_url instead of None when network settings are Automatic
+- Hardcoded German backend strings translated to English (setup notification, wizard errors, rate-limit messages, OAuth callback page)
+- ASPSP country resolved from the HA core country setting instead of hardcoded DE
+
 ## [0.13.0] — 2026-04-25
 
 ### Added

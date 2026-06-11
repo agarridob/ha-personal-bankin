@@ -116,10 +116,11 @@ def prepend_to_changelog(new_entry: str) -> None:
     """Insert new entry after the file header."""
     text = CHANGELOG_PATH.read_text(encoding="utf-8")
 
-    # Find insertion point (after header lines)
-    header_end = 0
-    for match in re.finditer(r'^(?:#[^#].*|All notable.*|$)\n', text, re.MULTILINE):
-        header_end = match.end()
+    # Find insertion point: right before the first existing entry header.
+    # (The previous regex matched every empty line, so entries were
+    # appended at the END of the file instead of after the header.)
+    first_entry = re.search(r"^## ", text, re.MULTILINE)
+    header_end = first_entry.start() if first_entry else len(text)
 
     before = text[:header_end].rstrip() + "\n\n"
     after = text[header_end:].lstrip("\n")
