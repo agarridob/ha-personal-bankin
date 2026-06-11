@@ -79,7 +79,7 @@ class FdCategorize extends HTMLElement {
       const data = await this._hass.callApi("GET", "finance_dashboard/transactions");
       if (data.privacy === "aggregate_only") {
         this.querySelector("#fdc").innerHTML =
-          '<div class="fdc-none">Admin-Zugang erforderlich.</div>';
+          `<div class="fdc-none">${window._fd.tSync("categorize.admin_required")}</div>`;
         return;
       }
       this._renderTransactions(data.transactions || []);
@@ -105,8 +105,8 @@ class FdCategorize extends HTMLElement {
           data-creditor="${(t.creditor||t.description||'').replace(/"/g,'')}"
           data-amount="${t.amount}">
           <span class="amt ${amt>=0?'pos':'neg'}">${eur(amt)}</span>
-          <div class="name">${t.creditor || t.description || 'Unbekannt'}</div>
-          <div class="meta">${t.date} &middot; ${t.category || 'unkategorisiert'}</div>
+          <div class="name">${t.creditor || t.description || window._fd.tSync("categorize.unknown")}</div>
+          <div class="meta">${t.date} &middot; ${t.category || window._fd.tSync("categorize.uncategorized")}</div>
         </div>`;
       }).join("");
 
@@ -125,8 +125,8 @@ class FdCategorize extends HTMLElement {
     const catList = this.querySelector("#catList");
     catList.innerHTML = cats.map(c =>
       `<div class="fdc-cat" data-cat="${c}">
-        <div class="cat-label"><div class="cat-dot" style="background:${catColors[c]}"></div>${c}</div>
-        <div class="cat-count">Hierher ziehen</div>
+        <div class="cat-label"><div class="cat-dot" style="background:${catColors[c]}"></div>${window._fd.CAT_LABELS[c] || c}</div>
+        <div class="cat-count">${window._fd.tSync("categorize.drop_here")}</div>
       </div>`
     ).join("");
 
@@ -139,7 +139,7 @@ class FdCategorize extends HTMLElement {
         try {
           const data = JSON.parse(e.dataTransfer.getData("text/plain"));
           this._assignCategory(data.creditor, el.dataset.cat);
-          el.querySelector(".cat-count").textContent = `${data.creditor} zugeordnet`;
+          el.querySelector(".cat-count").textContent = window._fd.tSync("categorize.assigned", { name: data.creditor });
         } catch {}
       });
     });
@@ -148,12 +148,22 @@ class FdCategorize extends HTMLElement {
   }
 
   async _assignCategory(creditor, category) {
-    // The backend categorizer learns from this assignment
-    // For now, we call a service to update rules
-    if (this._hass) {
-      await this._hass.callService("finance_dashboard", "categorize_transactions", {});
+    // Persist the assignment as a custom rule — the backend stores the
+    // keyword, rebuilds the categorizer and re-categorizes the cache.
+    if (this._hass && creditor) {
+      try {
+        await this._hass.callService("finance_dashboard", "add_categorization_rule", {
+          category,
+          keyword: creditor.toLowerCase(),
+        });
+      } catch (e) {
+        console.error("fd-categorize: add_categorization_rule failed:", e);
+        return;
+      }
     }
     this._addLearnedRule(creditor, category);
+    // Reload the list — newly matched transactions drop out of "other"
+    this._load();
   }
 
   _addLearnedRule(creditor, category) {

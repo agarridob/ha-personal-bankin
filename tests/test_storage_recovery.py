@@ -56,6 +56,8 @@ async def test_corrupt_storage_does_not_raise() -> None:
         mgr = FinanceDashboardManager(hass, entry)
 
         # Inject corrupt storage — Store.async_load raises JSONDecodeError
+        mgr._custom_rules_store = AsyncMock()
+        mgr._custom_rules_store.async_load.return_value = None
         mgr._transaction_store = AsyncMock()
         mgr._transaction_store.async_load.side_effect = json.JSONDecodeError(
             "Expecting value", "", 0
@@ -114,6 +116,8 @@ async def test_valid_storage_loads_normally() -> None:
         MockCat.return_value = MagicMock()
 
         mgr = FinanceDashboardManager(hass, entry)
+        mgr._custom_rules_store = AsyncMock()
+        mgr._custom_rules_store.async_load.return_value = None
         mgr._transaction_store = AsyncMock()
         mgr._transaction_store.async_load.return_value = valid_cache
 

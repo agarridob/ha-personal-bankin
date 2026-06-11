@@ -128,12 +128,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: FinanceDashboardConfigE
 async def _async_register_services(hass: HomeAssistant, manager, coordinator) -> None:
     """Register integration services."""
     from .const import (
+        SERVICE_ADD_RULE,
         SERVICE_CATEGORIZE,
         SERVICE_EXPORT_CSV,
         SERVICE_GET_BALANCE,
         SERVICE_GET_SUMMARY,
         SERVICE_REFRESH_ACCOUNTS,
         SERVICE_REFRESH_TRANSACTIONS,
+        SERVICE_REMOVE_RULE,
         SERVICE_SET_BUDGET_LIMIT,
     )
 
@@ -166,6 +168,28 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
 
     async def handle_categorize(call) -> None:
         await manager.async_categorize_transactions()
+
+    async def handle_add_rule(call) -> dict:
+        from homeassistant.exceptions import HomeAssistantError
+
+        category = (call.data.get("category") or "").strip()
+        keyword = (call.data.get("keyword") or "").strip()
+        if not category or not keyword:
+            raise HomeAssistantError("category and keyword are required")
+        result = await manager.async_add_categorization_rule(category, keyword)
+        await coordinator.async_refresh()
+        return result
+
+    async def handle_remove_rule(call) -> dict:
+        from homeassistant.exceptions import HomeAssistantError
+
+        category = (call.data.get("category") or "").strip()
+        keyword = (call.data.get("keyword") or "").strip()
+        if not category or not keyword:
+            raise HomeAssistantError("category and keyword are required")
+        result = await manager.async_remove_categorization_rule(category, keyword)
+        await coordinator.async_refresh()
+        return result
 
     async def handle_set_budget_limit(call) -> None:
         category = call.data.get("category")
@@ -223,6 +247,18 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
     hass.services.async_register(DOMAIN, SERVICE_GET_BALANCE, handle_get_balance)
     hass.services.async_register(DOMAIN, SERVICE_GET_SUMMARY, handle_get_summary)
     hass.services.async_register(DOMAIN, SERVICE_CATEGORIZE, handle_categorize)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ADD_RULE,
+        handle_add_rule,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REMOVE_RULE,
+        handle_remove_rule,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET_LIMIT, handle_set_budget_limit)
     hass.services.async_register(DOMAIN, SERVICE_EXPORT_CSV, handle_export_csv)
     hass.services.async_register(DOMAIN, SERVICE_TOGGLE_DEMO, handle_toggle_demo)
