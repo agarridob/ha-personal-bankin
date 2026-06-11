@@ -1,5 +1,23 @@
 # Build Log
 
+## 0.16.0 — 2026-06-12
+Version: 0.16.0
+Branch: fix/categorize-i18n
+Changes:
+- feat(categorizer): add pets category — veterinario, kiwoko, tiendanimal, zooplus, royal canin, etc.
+- feat(categorizer): add clothing category — zara, h&m, mango, primark, bershka, shein, zapatos, etc.
+- feat(categorizer): add charity category — donacion, unicef, cruz roja, caritas, greenpeace, etc.
+- feat(categorizer): add cards category — liquidacion/cargo/cuota tarjeta for credit card bill payments
+- feat(i18n): add cat.pets, cat.clothing, cat.charity, cat.cards to en.json and es.json
+- feat(frontend): add pets, clothing, charity, cards to categorize drag&drop card and CAT_COLORS
+
+## 0.15.5 — 2026-06-12
+Version: 0.15.5
+Branch: fix/categorize-i18n
+Changes:
+- fix(config_flow): remove manual __init__ from OptionsFlow — HA 2024.4+ sets config_entry as a read-only property, causing 500 on options form open
+- fix(i18n): add missing demo_mode key to strings.json, en.json and es.json so options form renders all fields
+
 ## 0.15.4 — 2026-06-11
 Version: 0.15.4
 Branch: fix/categorize-i18n
