@@ -23,7 +23,7 @@ class FdCategorySection extends HTMLElement {
       return;
     }
 
-    const { CAT_COLORS, CAT_LABELS, SHARED_CSS, escHtml } = window._fd;
+    const { CAT_COLORS, CAT_LABELS, SHARED_CSS, escHtml, tSync } = window._fd;
 
     const eur = (v) => new Intl.NumberFormat("de-DE", {
       style: "currency", currency: "EUR",
@@ -94,25 +94,25 @@ class FdCategorySection extends HTMLElement {
 
 <div class="grid">
   <div class="card">
-    <div class="card-h">Ausgaben nach Kategorie</div>
+    <div class="card-h">${tSync("category.title")}</div>
     <fd-donut-chart id="donut"></fd-donut-chart>
   </div>
   <div>
     <div class="card" style="margin-bottom:14px">
-      <div class="card-h">Top-3 Kostentreiber</div>
-      <div class="top-list">${top3 || `<div style="color:var(--tx2);font-size:13px;padding:18px">Keine Daten</div>`}</div>
+      <div class="card-h">${tSync("category.top3")}</div>
+      <div class="top-list">${top3 || `<div style="color:var(--tx2);font-size:13px;padding:18px">${tSync("common.no_data")}</div>`}</div>
     </div>
     <div class="card">
-      <div class="card-h">Fix vs. Variabel</div>
+      <div class="card-h">${tSync("category.fixvar")}</div>
       <div class="fv">
         <div class="fv-block">
           <div class="v">${eur(fixedCosts)}</div>
-          <div class="l">Fixkosten (${fixPct}%)</div>
+          <div class="l">${tSync("category.fixed", { pct: fixPct })}</div>
           <div class="fv-bar"><div style="width:${fixPct}%;height:100%;background:var(--bl);border-radius:4px"></div></div>
         </div>
         <div class="fv-block">
           <div class="v">${eur(varCosts)}</div>
-          <div class="l">Variabel (${varPct}%)</div>
+          <div class="l">${tSync("category.variable", { pct: varPct })}</div>
           <div class="fv-bar"><div style="width:${varPct}%;height:100%;background:var(--wn);border-radius:4px"></div></div>
         </div>
       </div>
@@ -132,7 +132,7 @@ class FdCategorySection extends HTMLElement {
     }
   }
   _renderSkeleton() {
-    const { SHARED_CSS } = window._fd;
+    const { SHARED_CSS, tSync } = window._fd;
     const shimmerCss = `
 @keyframes fd-shimmer {
   0%   { background-position: -400px 0; }
@@ -160,7 +160,7 @@ class FdCategorySection extends HTMLElement {
 @container (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 </style>
-<div class="grid" aria-busy="true" aria-label="Wird geladen…">
+<div class="grid" aria-busy="true" aria-label="${tSync("common.loading")}">
   <div class="card"><div class="skeleton-circle"></div>
     <div style="padding:0 20px 20px">
       ${Array.from({ length: 5 }, (_, i) => `<div class="skeleton-line" style="height:12px;width:${50 + i * 10}%"></div>`).join("")}

@@ -2,9 +2,9 @@
  * fd-stat-card — Single KPI card (reusable).
  *
  * Properties:
- *   label    {string}  — KPI label (e.g. "Gesamtsaldo")
+ *   label    {string}  — KPI label (e.g. "Total balance")
  *   value    {string}  — Formatted value (e.g. "1.234,56 EUR")
- *   subtitle {string}  — Detail line (e.g. "2 Konten")
+ *   subtitle {string}  — Detail line (e.g. "2 accounts")
  *   accent   {string}  — Top border color (CSS color)
  *   valclass {string}  — CSS class for value ("pos", "neg", "neu", or custom color style)
  */
@@ -46,7 +46,7 @@ class FdStatCard extends HTMLElement {
   }
 
   _render() {
-    const { SHARED_CSS, escHtml } = window._fd;
+    const { SHARED_CSS, escHtml, tSync } = window._fd;
     const { label = "", value = "", subtitle = "", accent = "var(--ac)", valclass = "" } = this._props;
 
     const LOCAL_CSS = `
@@ -108,7 +108,7 @@ class FdStatCard extends HTMLElement {
     if (this._loading) {
       this.shadowRoot.innerHTML = `
 <style>${SHARED_CSS}${LOCAL_CSS}</style>
-<div class="stat is-loading" aria-busy="true" aria-label="Wird geladen…">
+<div class="stat is-loading" aria-busy="true" aria-label="${tSync('common.loading')}">
   <div class="label">${escHtml(label)}</div>
   <div class="skeleton-line skeleton-value"></div>
   <div class="skeleton-line skeleton-sub"></div>

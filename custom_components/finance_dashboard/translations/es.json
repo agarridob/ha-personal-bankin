@@ -1,0 +1,87 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuración de Enable Banking",
+        "description": "Introduce tus credenciales del API de Enable Banking.\n\n**Cómo obtener tus credenciales:**\n1. Ve a [{enablebanking_url}/cp/applications]({enablebanking_url}/cp/applications)\n2. Elige **Sandbox** (pruebas) o **Production**\n3. Selecciona **Generate in the browser** para la clave\n4. Pon un nombre a la aplicación (p. ej. \"Home Assistant Finance\")\n5. Añade tu URL de retorno de HA: `{redirect_url}`\n6. Pulsa **Register** — la clave privada se descargará automáticamente\n7. Copia el **Application ID** de la página de confirmación\n\n**Seguridad:** tus credenciales se cifran y se guardan localmente en Home Assistant.\n\nTras la configuración, abre el panel lateral **Personal Bankin** para conectar tu banco.",
+        "data": {
+          "application_id": "Application ID",
+          "private_key_pem": "Clave privada (PEM)"
+        }
+      }
+    },
+    "error": {
+      "missing_credentials": "Introduce el Application ID y la clave privada.",
+      "invalid_key_format": "No se pudo cargar la clave privada. Asegúrate de pegar el contenido PEM completo, incluidas las líneas -----BEGIN/END PRIVATE KEY-----.",
+      "invalid_credentials": "Enable Banking rechazó las credenciales (HTTP 401/403). Verifica que el Application ID corresponde a la clave privada y que la aplicación está activada.",
+      "no_institutions": "No se encontraron bancos para tu país.",
+      "connection_failed": "Falló la conexión con Enable Banking. Comprueba tu conexión a internet."
+    },
+    "abort": {
+      "already_configured": "Personal Bankin ya está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ajustes de Personal Bankin",
+        "data": {
+          "refresh_interval_minutes": "Intervalo de actualización (minutos)",
+          "split_model": "Modelo de reparto del presupuesto",
+          "currency": "Moneda",
+          "enable_total_balance_sensor": "Activar sensor de saldo total",
+          "enable_dashboard_panel": "Mostrar panel lateral",
+          "transfer_detection_enabled": "Detección de cadenas de transferencias",
+          "transfer_amount_tolerance": "Tolerancia de importe (EUR)",
+          "transfer_time_window": "Ventana temporal (días)"
+        }
+      }
+    }
+  },
+  "services": {
+    "confirm_transfer_chain": {
+      "name": "Confirmar cadena de transferencias",
+      "description": "Confirma o rechaza una cadena de transferencias detectada.",
+      "fields": {
+        "chain_id": {
+          "name": "ID de la cadena",
+          "description": "UUID de la cadena de transferencias"
+        },
+        "confirmed": {
+          "name": "Confirmada",
+          "description": "True para confirmar, false para rechazar"
+        }
+      }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Actualización de Personal Bankin — reinicio necesario",
+      "description": "Personal Bankin se ha actualizado a la versión {version}. Es necesario reiniciar para aplicar la nueva versión.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Reiniciar Home Assistant",
+            "description": "Personal Bankin se ha actualizado a la versión {version}. Home Assistant debe reiniciarse para aplicar la actualización.\n\nPulsa **Enviar** para reiniciar ahora."
+          }
+        }
+      }
+    },
+    "reconfigure_required": {
+      "title": "Personal Bankin: reconfiguración necesaria",
+      "description": "La integración ha pasado de GoCardless a Enable Banking. Vuelve a configurarla con tus credenciales de Enable Banking en Ajustes > Integraciones."
+    },
+    "credentials_missing": {
+      "title": "Personal Bankin: faltan las credenciales del API",
+      "description": "No hay credenciales del API de Enable Banking guardadas. La integración no puede obtener datos bancarios hasta que la reconfigures en Ajustes > Dispositivos y servicios."
+    },
+    "credentials_invalid_pem": {
+      "title": "Personal Bankin: clave privada no válida",
+      "description": "No se pudo cargar la clave privada de Enable Banking guardada. Reconfigura la integración en Ajustes > Dispositivos y servicios y pega la clave PEM completa, incluidas las líneas BEGIN/END."
+    },
+    "storage_corrupt": {
+      "title": "Personal Bankin: caché de movimientos corrupta",
+      "description": "No se pudo leer el fichero de caché de movimientos `{storage_key}` ({error_class}). La integración ha arrancado con la caché vacía. Lanza una actualización manual para repoblarla."
+    }
+  }
+}

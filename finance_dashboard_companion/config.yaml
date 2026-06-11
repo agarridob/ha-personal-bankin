@@ -1,5 +1,5 @@
 name: Personal Bankin
-version: "0.13.2"
+version: "0.13.3"
 slug: finance_dashboard_companion
 description: >-
   Install or update the Finance Dashboard integration for Home Assistant.

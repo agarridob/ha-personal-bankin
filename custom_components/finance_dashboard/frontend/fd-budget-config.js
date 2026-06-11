@@ -27,7 +27,7 @@ class FdBudgetConfig extends HTMLElement {
 
   _render() {
     this.innerHTML = `
-<ha-card header="Budget Konfiguration">
+<ha-card header="${window._fd.tSync('budget.title')}">
 <style>
   .bcc { padding: 16px; font-size: 14px; }
   .bcc-row { display: flex; justify-content: space-between; align-items: center;
@@ -50,7 +50,7 @@ class FdBudgetConfig extends HTMLElement {
 </style>
 <div class="bcc" id="bcc">
   <div class="bcc-row">
-    <span class="bcc-label">Split-Modell</span>
+    <span class="bcc-label">${window._fd.tSync("budget.split_model")}</span>
     <select class="bcc-select" id="splitMode">
       <option value="equal">Equal (50/50)</option>
       <option value="proportional">Proportional (Einkommen)</option>
@@ -65,7 +65,7 @@ class FdBudgetConfig extends HTMLElement {
     </select>
   </div>
   <div class="bcc-section">
-    <h4>Vorschau Spielgeld</h4>
+    <h4>${window._fd.tSync("budget.preview")}</h4>
     <div class="bcc-preview" id="preview">
       <div style="color:var(--secondary-text-color);font-size:13px;text-align:center">
         Lade...

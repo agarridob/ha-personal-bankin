@@ -24,7 +24,7 @@ class FdCategorize extends HTMLElement {
 
   _render() {
     this.innerHTML = `
-<ha-card header="Transaktionen kategorisieren">
+<ha-card header="${window._fd.tSync('categorize.title')}">
 <style>
   .fdc { padding: 16px; font-size: 13px; }
   .fdc-info { color: var(--secondary-text-color); font-size: 12px; margin-bottom: 14px;
@@ -97,7 +97,7 @@ class FdCategorize extends HTMLElement {
 
     const txnList = this.querySelector("#txnList");
     if (uncategorized.length === 0) {
-      txnList.innerHTML = '<div class="fdc-none">Alle Transaktionen sind kategorisiert.</div>';
+      txnList.innerHTML = `<div class="fdc-none">${window._fd.tSync("categorize.all_done")}</div>`;
     } else {
       txnList.innerHTML = uncategorized.map((t, i) => {
         const amt = parseFloat(t.amount);
@@ -158,17 +158,17 @@ class FdCategorize extends HTMLElement {
 
   _addLearnedRule(creditor, category) {
     if (!this._learnedRules) this._learnedRules = [];
-    this._learnedRules.push({ creditor, category, time: new Date().toLocaleTimeString("de-DE") });
+    this._learnedRules.push({ creditor, category, time: new Date().toLocaleTimeString() });
     this._renderLearnedRules();
   }
 
   _renderLearnedRules() {
     const el = this.querySelector("#learned");
     if (!this._learnedRules || this._learnedRules.length === 0) {
-      el.innerHTML = '<h4>Gelernte Regeln</h4><div class="fdc-rule">Noch keine Zuordnungen in dieser Session.</div>';
+      el.innerHTML = `<h4>${window._fd.tSync("categorize.learned")}</h4><div class="fdc-rule">${window._fd.tSync("categorize.none_session")}</div>`;
       return;
     }
-    el.innerHTML = `<h4>Gelernte Regeln (${this._learnedRules.length})</h4>` +
+    el.innerHTML = `<h4>${window._fd.tSync("categorize.learned_count", { count: this._learnedRules.length })}</h4>` +
       this._learnedRules.map(r =>
         `<div class="fdc-rule">${r.time}: "${r.creditor}" &rarr; ${r.category}</div>`
       ).join("");

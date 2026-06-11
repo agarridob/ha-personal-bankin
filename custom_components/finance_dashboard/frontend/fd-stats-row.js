@@ -22,7 +22,7 @@ class FdStatsRow extends HTMLElement {
       return;
     }
 
-    const { SHARED_CSS } = window._fd;
+    const { SHARED_CSS, tSync } = window._fd;
 
     const eur = (v) => new Intl.NumberFormat("de-DE", {
       style: "currency", currency: "EUR",
@@ -60,35 +60,35 @@ class FdStatsRow extends HTMLElement {
 </div>`;
 
     const balance = this.shadowRoot.getElementById("balance");
-    balance.label = "Gesamtsaldo";
+    balance.label = tSync("stats.balance");
     balance.value = eur(totalBalance);
-    balance.subtitle = `${accountCount} ${accountCount === 1 ? "Konto" : "Konten"}`;
+    balance.subtitle = `${accountCount} ${accountCount === 1 ? tSync("general.accounts_singular") : tSync("general.accounts_plural")}`;
     balance.accent = "var(--accent-color, #4ecca3)";
     balance.valclass = totalBalance >= 0 ? "pos" : "neg";
 
     const expenses = this.shadowRoot.getElementById("expenses");
-    expenses.label = "Ausgaben";
+    expenses.label = tSync("stats.expenses");
     expenses.value = eur(totalExp);
-    expenses.subtitle = `${txnCount} Transaktionen`;
+    expenses.subtitle = tSync("stats.transactions", { count: txnCount });
     expenses.accent = "var(--dg, #e74c3c)";
     expenses.valclass = "neg";
 
     const income = this.shadowRoot.getElementById("income");
-    income.label = "Einnahmen";
+    income.label = tSync("stats.income");
     income.value = eur(totalInc);
-    income.subtitle = "Netto";
+    income.subtitle = tSync("stats.net");
     income.accent = "var(--bl, #3b82f6)";
     income.valclass = "";
 
     const savings = this.shadowRoot.getElementById("savings");
-    savings.label = "Sparquote";
+    savings.label = tSync("stats.savings");
     savings.value = `${savingsRate}%`;
-    savings.subtitle = `${surplus >= 0 ? "+" : ""}${eur(surplus)} Monatssaldo`;
+    savings.subtitle = tSync("stats.month_surplus", { amount: `${surplus >= 0 ? "+" : ""}${eur(surplus)}` });
     savings.accent = "var(--pp, #8b5cf6)";
     savings.valclass = "";
   }
   _renderSkeleton() {
-    const { SHARED_CSS } = window._fd;
+    const { SHARED_CSS, tSync } = window._fd;
     const LOCAL_CSS = `
 :host { margin-bottom: 20px; }
 .stats {
@@ -111,7 +111,7 @@ class FdStatsRow extends HTMLElement {
     ["balance", "expenses", "income", "savings"].forEach((id) => {
       const el = this.shadowRoot.getElementById(id);
       if (el) {
-        el.label = { balance: "Gesamtsaldo", expenses: "Ausgaben", income: "Einnahmen", savings: "Sparquote" }[id];
+        el.label = { balance: tSync("stats.balance"), expenses: tSync("stats.expenses"), income: tSync("stats.income"), savings: tSync("stats.savings") }[id];
         el.setData(null); // triggers skeleton
       }
     });

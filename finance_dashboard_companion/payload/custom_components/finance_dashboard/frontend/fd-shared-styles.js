@@ -55,30 +55,25 @@ export const CAT_COLORS = {
   other: "#6b7280",
 };
 
-/** Category label mapping (German). */
-export const CAT_LABELS = {
-  housing: "Wohnen",
-  loans: "Kredite",
-  food: "Lebensmittel",
-  utilities: "Nebenkosten",
-  insurance: "Versicherung",
-  subscriptions: "Abos",
-  transport: "Mobilität",
-  cleaning: "Reinigung",
-  income: "Einkommen",
-  transfers: "Überträge",
-  other: "Sonstiges",
-};
+/**
+ * Category label lookup — resolves lazily through the locale files
+ * (cat.* keys) so labels follow the user's language. Components index
+ * it like a plain object: CAT_LABELS[cat] || cat.
+ */
+export const CAT_LABELS = new Proxy(
+  {},
+  {
+    get(_target, key) {
+      if (typeof key !== "string") return undefined;
+      const v = tSync(`cat.${key}`);
+      return v === `cat.${key}` ? undefined : v;
+    },
+  }
+);
 
 /** Member color palette for household charts. */
 export const MEMBER_COLORS = [
   "#3b82f6", "#8b5cf6", "#f97316", "#ec4899", "#06b6d4",
-];
-
-/** German month names (abbreviated). */
-export const MONTH_NAMES = [
-  "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
-  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
 ];
 
 /**
@@ -181,7 +176,7 @@ a:focus:not(:focus-visible),
  *   2. navigator.language
  *   3. Fallback: "en"
  *
- * Supported languages: "de", "en". Unknown languages fall back to "en".
+ * Supported languages: "en", "es". Unknown languages fall back to "en".
  */
 const _i18nCache = {};
 
@@ -202,7 +197,7 @@ function _resolveLang() {
   const hassLang = window._fd && window._fd._hass && window._fd._hass.language;
   const raw = hassLang || navigator.language || "en";
   const base = raw.toLowerCase().split("-")[0];
-  return ["de", "en"].includes(base) ? base : "en";
+  return ["en", "es"].includes(base) ? base : "en";
 }
 
 /**
@@ -250,7 +245,6 @@ window._fd = {
   CAT_COLORS,
   CAT_LABELS,
   MEMBER_COLORS,
-  MONTH_NAMES,
   SHARED_CSS,
   t,
   tSync,
@@ -264,7 +258,7 @@ window._fd = {
  */
 (function _warmupLocales() {
   const raw = (navigator.language || "en").toLowerCase().split("-")[0];
-  const lang = ["de", "en"].includes(raw) ? raw : "en";
+  const lang = ["en", "es"].includes(raw) ? raw : "en";
   // Fire-and-forget: populate _i18nCache before first render tick
   _loadLocale(lang);
   if (lang !== "en") _loadLocale("en");

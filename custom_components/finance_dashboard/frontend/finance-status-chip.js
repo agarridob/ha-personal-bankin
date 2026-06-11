@@ -12,15 +12,16 @@
  *   element.hass = hass;
  *   element.setState("loading");
  *   element.setState("success");
- *   element.setState("error", "API nicht erreichbar");
+ *   element.setState("error", "API unreachable");
  *   element.setState("idle");
  */
 
+// Labels are locale keys resolved lazily in _getLabelText via tSync.
 const STATES = {
-  idle: { icon: "dot", label: null, cls: "idle" },
-  loading: { icon: "spinner", label: "Aktualisiert\u2026", cls: "loading" },
-  success: { icon: "check", label: "Aktualisiert", cls: "success" },
-  error: { icon: "alert", label: "Fehler", cls: "error" },
+  idle: { icon: "dot", labelKey: null, cls: "idle" },
+  loading: { icon: "spinner", labelKey: "chip.loading", cls: "loading" },
+  success: { icon: "check", labelKey: "chip.success", cls: "success" },
+  error: { icon: "alert", labelKey: "chip.error", cls: "error" },
 };
 
 class FinanceStatusChip extends HTMLElement {
@@ -67,7 +68,7 @@ class FinanceStatusChip extends HTMLElement {
     }
 
     this._state = state;
-    this._errorMsg = state === "error" ? (errorMsg || "Fehler") : null;
+    this._errorMsg = state === "error" ? (errorMsg || window._fd.tSync("chip.error")) : null;
 
     if (state === "success") {
       this._lastUpdate = new Date();
@@ -258,17 +259,18 @@ class FinanceStatusChip extends HTMLElement {
   }
 
   _getLabelText(s) {
+    const { tSync } = window._fd;
     if (this._state === "error") {
-      return this._errorMsg || "Fehler";
+      return this._errorMsg || tSync("chip.error");
     }
-    if (s.label) return s.label;
+    if (s.labelKey) return tSync(s.labelKey);
     // idle — show timestamp
     if (this._lastUpdate) {
       const hh = String(this._lastUpdate.getHours()).padStart(2, "0");
       const mm = String(this._lastUpdate.getMinutes()).padStart(2, "0");
-      return `Stand ${hh}:${mm}`;
+      return tSync("chip.as_of", { time: `${hh}:${mm}` });
     }
-    return "Bereit";
+    return tSync("chip.ready");
   }
 
   _onClick() {

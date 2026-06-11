@@ -276,7 +276,7 @@ class FinanceDashboardPanel extends HTMLElement {
         // open directly at institution selection (step 1 — credentials flow is in HA config flow).
         // Status "ready" or "configured" means creds exist → skip nothing, wizard starts at step 1.
         // We set initialStep=1 unconditionally here — the wizard always starts at institution list
-        // when called from "+ Konto" since credentials are already stored in the integration.
+        // when called from "+ Account" since credentials are already stored in the integration.
         startStep = 1;
       } catch (_) {
         startStep = 1;

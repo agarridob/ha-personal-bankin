@@ -274,7 +274,7 @@ h1 {
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <div class="hdr">
   <div class="title-row">
-    <h1>Finance Dashboard</h1>
+    <h1>${tSync("header.title")}</h1>
     <span class="demo-badge" id="demoBadge">DEMO</span>
   </div>
   <div class="right">
@@ -283,7 +283,7 @@ h1 {
       <span class="ts-stats" id="tsStats"></span>
     </div>
     <button class="btn btn-demo" id="demoBtn" aria-label="${tSync("header.demo_toggle")}" aria-pressed="false">${tSync("header.demo_off")}</button>
-    <span class="month-label" id="monthLabel" aria-label="Aktueller Monat: ${monthLabel}">${monthLabel}</span>
+    <span class="month-label" id="monthLabel" aria-label="${tSync("header.month_aria", { month: monthLabel })}">${monthLabel}</span>
     <button class="btn btn-p" id="refreshBtn">${tSync("header.refresh.button")}</button>
     <button class="btn" id="addAccountBtn" title="${tSync("header.add_account_title")}">${tSync("header.add_account")}</button>
   </div>

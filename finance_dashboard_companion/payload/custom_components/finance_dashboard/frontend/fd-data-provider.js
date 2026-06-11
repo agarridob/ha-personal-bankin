@@ -189,7 +189,7 @@ class FdDataProvider extends HTMLElement {
     } catch (e) {
       console.error("fd-data-provider: demo data fetch failed:", e);
       this.dispatchEvent(new CustomEvent("fd-data-updated", {
-        detail: { error: "Demo-Daten konnten nicht geladen werden", demoMode: true },
+        detail: { error: window._fd.tSync("demo.load_error"), demoMode: true },
         bubbles: true,
         composed: true,
       }));
@@ -230,7 +230,7 @@ class FdDataProvider extends HTMLElement {
       resultStatus = resp?.status || null;
       if (resp && resp.ok === false) {
         // Rate-limited or hard error — still dispatch the status so the
-        // header can render the "Morgen verfügbar" chip correctly.
+        // header can render the "Available tomorrow" chip correctly.
         this.dispatchEvent(new CustomEvent("fd-refresh-done", {
           detail: {
             status: resultStatus,

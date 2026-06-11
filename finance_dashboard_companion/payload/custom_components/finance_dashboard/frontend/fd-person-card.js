@@ -28,18 +28,18 @@ class FdPersonCard extends HTMLElement {
       return;
     }
 
-    const { SHARED_CSS, escHtml } = window._fd;
+    const { SHARED_CSS, escHtml, tSync } = window._fd;
 
     const eur = (v) => new Intl.NumberFormat("de-DE", {
       style: "currency", currency: "EUR",
     }).format(v || 0);
 
-    const splitLabel = this._splitModel === "proportional" ? "Proportional"
-      : this._splitModel === "equal" ? "Gleich" : "Benutzerdefiniert";
+    const splitLabel = this._splitModel === "proportional" ? tSync("person.split.proportional")
+      : this._splitModel === "equal" ? tSync("person.split.equal") : tSync("person.split.custom");
 
     const spielgeldClass = m.spielgeld >= 0 ? "pos" : "neg";
     const bonusRow = m.bonus_amount > 0
-      ? `<li class="row"><span class="l">Bonus (erkannt)</span><span class="pos">${eur(m.bonus_amount)}</span></li>`
+      ? `<li class="row"><span class="l">${tSync("person.bonus")}</span><span class="pos">${eur(m.bonus_amount)}</span></li>`
       : "";
 
     const LOCAL_CSS = `
@@ -77,15 +77,15 @@ class FdPersonCard extends HTMLElement {
 <style>${SHARED_CSS}${LOCAL_CSS}</style>
 <div class="person">
   <div class="name">${escHtml(m.person)}</div>
-  <div class="ratio">Einkommensanteil: ${(m.income_ratio || 0).toFixed(1)}% &middot; ${escHtml(splitLabel)}</div>
+  <div class="ratio">${tSync("person.income_share")}: ${(m.income_ratio || 0).toFixed(1)}% &middot; ${escHtml(splitLabel)}</div>
   <ul class="rows">
-    <li class="row"><span class="l">Einkommen (netto)</span><span>${eur(m.net_income)}</span></li>
-    <li class="row"><span class="l">Anteil Fixkosten</span><span class="neg">${eur(m.shared_costs_share)}</span></li>
-    <li class="row"><span class="l">Eigene Ausgaben</span><span class="neg">${eur(m.individual_costs)}</span></li>
+    <li class="row"><span class="l">${tSync("person.net_income")}</span><span>${eur(m.net_income)}</span></li>
+    <li class="row"><span class="l">${tSync("person.fixed_share")}</span><span class="neg">${eur(m.shared_costs_share)}</span></li>
+    <li class="row"><span class="l">${tSync("person.own_expenses")}</span><span class="neg">${eur(m.individual_costs)}</span></li>
     ${bonusRow}
   </ul>
   <div class="saldo">
-    <span class="l">Spielgeld</span>
+    <span class="l">${tSync("person.spielgeld")}</span>
     <span class="v ${spielgeldClass}">${eur(m.spielgeld)}</span>
   </div>
 </div>`;
