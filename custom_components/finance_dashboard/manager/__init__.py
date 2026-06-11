@@ -38,6 +38,7 @@ from ..const import (
     STORAGE_KEY_TRANSFER_OVERRIDES,
 )
 from ..household import HouseholdMember, HouseholdModel
+from ..month_cycle import get_month_range
 from ..transfer_detector import (
     apply_overrides,
     get_effective_transactions,
@@ -382,21 +383,28 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         target_month = month or now.month
         target_year = year or now.year
 
+        # Determine cycle range based on configured month_start_day
+        month_start_day = self._entry.options.get("month_start_day", 1)
+        cycle_mode = "salary" if month_start_day > 1 else "calendar"
+        cycle_start, cycle_end = get_month_range(
+            target_month, target_year, cycle_mode, month_start_day
+        )
+
         # Use effective transactions (intermediate chain legs excluded)
         effective = get_effective_transactions(self._transactions)
 
-        # Filter for target month
+        # Filter for target cycle period
         monthly_txns = [
             txn
             for txn in effective
-            if self._is_in_month(txn, target_month, target_year) and txn.get("_status") == "booked"
+            if self._is_in_range(txn, cycle_start, cycle_end) and txn.get("_status") == "booked"
         ]
 
         # Count excluded transfers for transparency
         all_monthly = [
             txn
             for txn in self._transactions
-            if self._is_in_month(txn, target_month, target_year) and txn.get("_status") == "booked"
+            if self._is_in_range(txn, cycle_start, cycle_end) and txn.get("_status") == "booked"
         ]
         excluded_chain_txns = [
             txn
@@ -449,6 +457,8 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         return {
             "month": target_month,
             "year": target_year,
+            "cycle_start": cycle_start.isoformat(),
+            "cycle_end": cycle_end.isoformat(),
             "total_income": round(total_income, 2),
             "total_expenses": round(total_expenses, 2),
             "balance": round(total_income - total_expenses, 2),
@@ -732,7 +742,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                 else:
                     persons[person]["individual_costs"] += abs(amount)
 
-        # Build HouseholdMembers
+        # Build HouseholdMembers — inherit global salary cycle config
+        month_start_day = self._entry.options.get("month_start_day", 1)
+        cycle_mode = "salary" if month_start_day > 1 else "calendar"
         members = []
         for name, data in persons.items():
             members.append(
@@ -742,6 +754,8 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                     gross_income=data["income"],
                     individual_costs=data["individual_costs"],
                     account_ids=data["account_ids"],
+                    month_cycle=cycle_mode,
+                    salary_day=month_start_day,
                 )
             )
 
@@ -800,13 +814,13 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                 )
 
     @staticmethod
-    def _is_in_month(txn: dict[str, Any], month: int, year: int) -> bool:
-        """Check if a transaction belongs to the given month."""
+    def _is_in_range(txn: dict[str, Any], start: Any, end: Any) -> bool:
+        """Check if a transaction falls within a date range (inclusive)."""
         booking_date = txn.get("bookingDate", "")
         if not booking_date:
             return False
         try:
-            dt = datetime.strptime(booking_date, "%Y-%m-%d")
-            return dt.month == month and dt.year == year
+            dt = datetime.strptime(booking_date, "%Y-%m-%d").date()
+            return start <= dt <= end
         except ValueError:
             return False
