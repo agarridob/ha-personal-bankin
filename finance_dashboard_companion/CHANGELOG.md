@@ -13,6 +13,15 @@
 
 
 
+
+## 0.16.0
+- Add pets category — veterinario, kiwoko, tiendanimal, zooplus, royal canin, etc.
+- Add clothing category — zara, h&m, mango, primark, bershka, shein, zapatos, etc.
+- Add charity category — donacion, unicef, cruz roja, caritas, greenpeace, etc.
+- Add cards category — liquidacion/cargo/cuota tarjeta for credit card bill payments
+- Add cat.pets, cat.clothing, cat.charity, cat.cards to en.json and es.json
+- Add pets, clothing, charity, cards to categorize drag&drop card and CAT_COLORS
+
 ## 0.15.5
 - Remove manual __init__ from OptionsFlow — HA 2024.4+ sets config_entry as a read-only property, causing 500 on options form open
 - Add missing demo_mode key to strings.json, en.json and es.json so options form renders all fields
