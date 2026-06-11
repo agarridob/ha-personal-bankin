@@ -172,6 +172,7 @@ CATEGORIZATION_RULES = {
         "telefonica",
         "telefónica",
         "euskaltel",
+        "octopus",
     ],
     CATEGORY_INCOME: [
         "nomina",
