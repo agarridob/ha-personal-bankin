@@ -99,13 +99,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEn
         except Exception:
             _LOGGER.exception("Initial cached data load failed")
 
+    async def _on_started(_event) -> None:
+        # Coroutine listener — the event bus awaits it on the event loop,
+        # so no manual task creation is needed. Creating tasks from a
+        # lambda here crashed on recent HA cores that enforce
+        # async_create_task being called from the event loop thread,
+        # which aborted the initial cache load and left the panel empty.
+        await _initial_load()
+
     if hass.is_running:
         hass.async_create_task(_initial_load())
     else:
-        hass.bus.async_listen_once(
-            "homeassistant_started",
-            lambda _event: hass.async_create_task(_initial_load()),
-        )
+        hass.bus.async_listen_once("homeassistant_started", _on_started)
 
     _LOGGER.info("Finance Dashboard v%s loaded", entry.version)
     return True
