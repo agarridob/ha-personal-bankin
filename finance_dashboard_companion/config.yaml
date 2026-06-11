@@ -1,4 +1,4 @@
-name: Finance Dashboard
+name: Personal Bankin
 version: "0.13.1"
 slug: finance_dashboard_companion
 description: >-
@@ -6,7 +6,7 @@ description: >-
   Provides secure banking data access via the Enable Banking PSD2 API
   (JWT RS256, 4/day/ASPSP rate limit) with auto-categorization,
   household budget tracking, and more.
-url: "https://github.com/Jerry0022/homeassistant-finance"
+url: "https://github.com/agarridob/ha-personal-bankin"
 startup: once
 boot: auto
 init: false

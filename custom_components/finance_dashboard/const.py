@@ -8,7 +8,7 @@ VERSION = "0.13.1"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
-PANEL_TITLE = "Finance"
+PANEL_TITLE = "Personal Bankin"
 PANEL_ICON = "mdi:finance"
 PANEL_COMPONENT_NAME = "finance-dashboard-panel"
 PANEL_MODULE_PATH = f"/api/{DOMAIN}/static/finance-dashboard-panel.js?v={VERSION}"

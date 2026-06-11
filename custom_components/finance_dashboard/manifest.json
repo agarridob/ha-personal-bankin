@@ -1,8 +1,8 @@
 {
   "domain": "finance_dashboard",
-  "name": "Finance",
+  "name": "Personal Bankin",
   "codeowners": [
-    "@Jerry0022"
+    "@agarridob"
   ],
   "config_flow": true,
   "dependencies": [
@@ -12,7 +12,7 @@
     "panel_custom"
   ],
   "integration_type": "service",
-  "documentation": "https://github.com/Jerry0022/homeassistant-finance",
+  "documentation": "https://github.com/agarridob/ha-personal-bankin",
   "iot_class": "cloud_push",
   "requirements": [
     "cryptography>=42.0.0",
