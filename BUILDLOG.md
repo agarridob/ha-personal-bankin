@@ -1,5 +1,15 @@
 # Build Log
 
+## 0.15.1 — 2026-06-11
+Version: 0.15.1
+Branch: fix/eb-transactions-format
+Changes:
+- fix(client): parse the real Enable Banking /transactions response — flat transaction list with per-entry status (BOOK/PEND) instead of the GoCardless {booked, pending} shape the code assumed ('list' object has no attribute 'get' crash, transactions never loaded)
+- fix(client): apply credit_debit_indicator to amounts — Enable Banking sends unsigned amounts, so debits are now negative as downstream consumers expect
+- fix(client): join list-typed remittance_information into a single string
+- feat(client): follow continuation_key pagination on /transactions (capped at 20 pages) so long date windows return all transactions
+- test: +6 unit tests pinning the Enable Banking response parsing (203 total)
+
 ## 0.15.0 — 2026-06-11
 Version: 0.15.0
 Branch: feat/brand-logo

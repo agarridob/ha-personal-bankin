@@ -287,6 +287,9 @@ class EnableBankingClient:
     # Set once at class level so all instances share the same string.
     _PSU_UA: str = f"HomeAssistant-Finance-Dashboard/{VERSION}"
 
+    # Safety cap for continuation_key pagination on /transactions
+    _MAX_TX_PAGES: int = 20
+
     async def async_get_balances(
         self,
         account_id: str,
@@ -333,29 +336,69 @@ class EnableBankingClient:
             transactionAmount: {amount, currency},
             remittanceInformationUnstructured, creditorName.
         """
-        params = []
-        if date_from:
-            params.append(f"date_from={date_from}")
-        if date_to:
-            params.append(f"date_to={date_to}")
+        booked_raw: list[dict[str, Any]] = []
+        pending_raw: list[dict[str, Any]] = []
+        continuation_key: str | None = None
 
-        query = f"?{'&'.join(params)}" if params else ""
-        result = await self._async_request(
-            "GET",
-            f"/accounts/{account_id}/transactions{query}",
-            psu_ip=psu_ip,
-            psu_ua=self._PSU_UA,
-        )
+        # Enable Banking paginates via continuation_key — follow it so long
+        # date windows return ALL transactions, with a defensive page cap.
+        for _page in range(self._MAX_TX_PAGES):
+            params = []
+            if date_from:
+                params.append(f"date_from={date_from}")
+            if date_to:
+                params.append(f"date_to={date_to}")
+            if continuation_key:
+                params.append(f"continuation_key={continuation_key}")
 
-        transactions = (
-            result
-            if isinstance(result, dict) and ("booked" in result or "pending" in result)
-            else result.get("transactions", {})
-        )
+            query = f"?{'&'.join(params)}" if params else ""
+            result = await self._async_request(
+                "GET",
+                f"/accounts/{account_id}/transactions{query}",
+                psu_ip=psu_ip,
+                psu_ua=self._PSU_UA,
+            )
 
-        booked = [self._normalize_transaction(t) for t in transactions.get("booked", [])]
-        pending = [self._normalize_transaction(t) for t in transactions.get("pending", [])]
+            self._collect_transactions_page(result, booked_raw, pending_raw)
+            continuation_key = result.get("continuation_key") if isinstance(result, dict) else None
+            if not continuation_key:
+                break
+        else:
+            _LOGGER.warning(
+                "Transaction pagination capped at %d pages for account — "
+                "older transactions in the window were not fetched",
+                self._MAX_TX_PAGES,
+            )
+
+        booked = [self._normalize_transaction(t) for t in booked_raw]
+        pending = [self._normalize_transaction(t) for t in pending_raw]
         return {"booked": booked, "pending": pending}
+
+    @staticmethod
+    def _collect_transactions_page(
+        result: dict[str, Any] | list[dict[str, Any]],
+        booked_raw: list[dict[str, Any]],
+        pending_raw: list[dict[str, Any]],
+    ) -> None:
+        """Append one /transactions response page to the raw accumulators.
+
+        Accepts both the real Enable Banking shape — a flat list of
+        transactions (bare or wrapped in {"transactions": [...]}) where each
+        entry carries a status field (BOOK/PEND/...) — and the legacy
+        GoCardless-style {booked, pending} dict kept for compatibility.
+        """
+        if isinstance(result, dict) and ("booked" in result or "pending" in result):
+            booked_raw.extend(result.get("booked", []))
+            pending_raw.extend(result.get("pending", []))
+            return
+
+        raw = result.get("transactions", []) or [] if isinstance(result, dict) else result or []
+        for txn in raw:
+            status = str(txn.get("status") or "BOOK").upper()
+            if status == "PEND":
+                pending_raw.append(txn)
+            else:
+                booked_raw.append(txn)
 
     # ------------------------------------------------------------------
     # Data normalization (Enable Banking → GoCardless field names)
@@ -372,13 +415,28 @@ class EnableBankingClient:
         creditor = txn.get("creditor")
         debtor = txn.get("debtor")
 
+        # Enable Banking sends unsigned amounts plus a credit/debit
+        # indicator; downstream consumers expect GoCardless-style signed
+        # amounts (negative = money out).
+        amount = str(amount_data.get("amount", "0"))
+        indicator = str(txn.get("credit_debit_indicator") or "").upper()
+        if indicator == "DBIT" and not amount.startswith("-"):
+            amount = f"-{amount}"
+
+        # remittance_information is a list of strings in Enable Banking
+        remittance = txn.get("remittance_information", "") or txn.get(
+            "remittance_information_unstructured", ""
+        )
+        if isinstance(remittance, list):
+            remittance = " ".join(str(part) for part in remittance if part)
+
         return {
             "transactionId": txn.get("entry_reference", txn.get("transaction_id", "")),
             "bookingDate": txn.get("booking_date", ""),
             "bookingDateTime": txn.get("booking_date_time", ""),
             "valueDate": txn.get("value_date", ""),
             "transactionAmount": {
-                "amount": amount_data.get("amount", "0"),
+                "amount": amount,
                 "currency": amount_data.get("currency", "EUR"),
             },
             "creditorName": (
@@ -389,10 +447,7 @@ class EnableBankingClient:
             "debtorName": (
                 debtor.get("name", "") if isinstance(debtor, dict) else txn.get("debtor_name", "")
             ),
-            "remittanceInformationUnstructured": (
-                txn.get("remittance_information", "")
-                or txn.get("remittance_information_unstructured", "")
-            ),
+            "remittanceInformationUnstructured": remittance,
         }
 
     @staticmethod

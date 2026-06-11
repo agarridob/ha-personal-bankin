@@ -8,6 +8,14 @@
 
 
 
+
+## 0.15.1
+- Parse the real Enable Banking /transactions response — flat transaction list with per-entry status (BOOK/PEND) instead of the GoCardless {booked, pending} shape the code assumed ('list' object has no attribute 'get' crash, transactions never loaded)
+- Apply credit_debit_indicator to amounts — Enable Banking sends unsigned amounts, so debits are now negative as downstream consumers expect
+- Join list-typed remittance_information into a single string
+- Follow continuation_key pagination on /transactions (capped at 20 pages) so long date windows return all transactions
+- Test: +6 unit tests pinning the Enable Banking response parsing (203 total)
+
 ## 0.15.0
 - Derive all branding assets from the Personal Bankin logo (brand/logo-source.png) — transparent light/dark icon and logo variants, companion add-on icons, frontend copy
 - Panel onboarding screen shows the Personal Bankin logo instead of the bank emoji
