@@ -116,4 +116,4 @@ class FdRecurringList extends HTMLElement {
   }
 }
 
-customElements.define("fd-recurring-list", FdRecurringList);
+if (!customElements.get("fd-recurring-list")) customElements.define("fd-recurring-list", FdRecurringList);

@@ -280,8 +280,30 @@ class RefreshMixin:
         if accounts_hit > 0:
             self._tx_by_account.pop("__unknown__", None)
 
-        # Rebuild flat list from per-account dict (deterministic sort)
-        all_transactions = [tx for txs in self._tx_by_account.values() for tx in txs]
+        # Rebuild flat list from per-account dict, deduplicating by transactionId.
+        # The same physical account may be linked under multiple Enable Banking
+        # session IDs, which causes the API to return identical transactions for
+        # each session. We keep the first occurrence (accounts are iterated in
+        # insertion order, so the most-recently-refreshed copy wins).
+        seen_tx_ids: set[str] = set()
+        all_transactions: list[dict] = []
+        dup_count = 0
+        for txs in self._tx_by_account.values():
+            for tx in txs:
+                tid = tx.get("transactionId")
+                if tid:
+                    if tid in seen_tx_ids:
+                        dup_count += 1
+                        continue
+                    seen_tx_ids.add(tid)
+                all_transactions.append(tx)
+        if dup_count:
+            _LOGGER.warning(
+                "Deduplicated %d duplicate transactions across account buckets. "
+                "This usually means the same bank account is linked under multiple "
+                "Enable Banking sessions — consider re-configuring the integration.",
+                dup_count,
+            )
 
         # Sort by booking date (newest first)
         all_transactions.sort(

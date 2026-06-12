@@ -178,4 +178,4 @@ class FdCategorySection extends HTMLElement {
   }
 }
 
-customElements.define("fd-category-section", FdCategorySection);
+if (!customElements.get("fd-category-section")) customElements.define("fd-category-section", FdCategorySection);

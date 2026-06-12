@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = ROOT / "custom_components" / "finance_dashboard" / "manifest.json"
 ADDON_CONFIG_PATH = ROOT / "finance_dashboard_companion" / "config.yaml"
 CONST_PATH = ROOT / "custom_components" / "finance_dashboard" / "const.py"
+SHARED_STYLES_PATH = ROOT / "custom_components" / "finance_dashboard" / "frontend" / "fd-shared-styles.js"
 
 
 def get_manifest_version() -> str:
@@ -99,6 +100,17 @@ def set_version(new_version: str) -> None:
     )
     CONST_PATH.write_text(text, encoding="utf-8")
     print(f"Updated const.py -> {new_version}")
+
+    # Update _FD_VERSION in fd-shared-styles.js
+    text = SHARED_STYLES_PATH.read_text(encoding="utf-8")
+    text = re.sub(
+        r'^(const _FD_VERSION\s*=\s*)"[^"]*";',
+        f'\\1"{new_version}";',
+        text,
+        flags=re.MULTILINE,
+    )
+    SHARED_STYLES_PATH.write_text(text, encoding="utf-8")
+    print(f"Updated fd-shared-styles.js -> {new_version}")
 
     # Auto-sync payload
     sync_script = ROOT / "scripts" / "sync_addon_payload.py"
