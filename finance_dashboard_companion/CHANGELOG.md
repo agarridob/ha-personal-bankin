@@ -14,6 +14,12 @@
 
 
 
+
+## 0.16.1
+- Switch fd-categorize.js from tSync() to await t() — prevents instruction and admin-only strings rendering as raw keys on first load
+- Cache-bust locale fetch in fd-shared-styles.js using ?v= from module URL so updated locale files are picked up after version bumps
+- Chore(docs): document local HA instance SSH alias and deploy command in CLAUDE.md
+
 ## 0.16.0
 - Add pets category — veterinario, kiwoko, tiendanimal, zooplus, royal canin, etc.
 - Add clothing category — zara, h&m, mango, primark, bershka, shein, zapatos, etc.
