@@ -290,6 +290,47 @@ class FdDataProvider extends HTMLElement {
     return resultStatus || {};
   }
 
+  /** Switch the displayed period and fetch historical summary from API. */
+  async setMonth(month, year) {
+    if (!this._hass) return;
+    const now = new Date();
+    const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear();
+    if (isCurrentMonth) {
+      // Back to current month — use entity state (already in _data)
+      await this._rebuild();
+      return;
+    }
+    try {
+      const summary = await this._hass.callApi(
+        "GET", `${DOMAIN}/summary?month=${month}&year=${year}`);
+      if (!summary || !this._data) return;
+      const updated = {
+        ...this._data,
+        summary: {
+          totalIncome: summary.total_income || 0,
+          totalExpenses: summary.total_expenses || 0,
+          balance: summary.balance || 0,
+          categories: summary.categories || {},
+          transactionCount: summary.transaction_count || 0,
+          fixedCosts: summary.fixed_costs || 0,
+          variableCosts: summary.variable_costs || 0,
+          month: summary.month || month,
+          year: summary.year || year,
+        },
+        household: summary.household || this._data.household,
+        recurring: summary.recurring || this._data.recurring,
+      };
+      this._data = updated;
+      this.dispatchEvent(new CustomEvent("fd-data-updated", {
+        detail: updated,
+        bubbles: true,
+        composed: true,
+      }));
+    } catch (e) {
+      console.warn("fd-data-provider: historical summary fetch failed:", e);
+    }
+  }
+
   /** Fetch cached transactions (admin-only, cache-read, unbounded-safe). */
   async _fetchTransactions() {
     if (!this._hass) return;

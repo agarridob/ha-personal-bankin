@@ -2,6 +2,14 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.17.0] — 2026-06-12
+
+### Added
+- Accumulate transaction history — each refresh merges new transactions into storage instead of overwriting; historical booked txns outside the 90-day fetch window are preserved up to 24 months (HISTORY_RETENTION_MONTHS)
+- /api/finance_dashboard/summary now accepts ?month=M&year=Y query params to serve any historical period from the accumulated cache without a live bank API call
+- Add ‹ › month navigation arrows to fd-header; next-month button disabled when at current month; dispatches fd-month-changed event
+- Fd-data-provider.setMonth() fetches historical summaries from API and dispatches fd-data-updated so all dashboard components reflect the selected period
+
 ## [0.16.1] — 2026-06-12
 
 ### Changed

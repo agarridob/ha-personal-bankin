@@ -23,6 +23,10 @@ class FdHeader extends HTMLElement {
     this._lastRefreshStats = null;
     this._timestampTimer = null;
     this._toastTimer = null;
+    // Month navigation state — null means "current month"
+    const now = new Date();
+    this._selectedMonth = now.getMonth() + 1;
+    this._selectedYear = now.getFullYear();
   }
 
   set lastRefresh(v) {
@@ -53,6 +57,16 @@ class FdHeader extends HTMLElement {
     this._updateDemoBtn();
   }
 
+  set selectedMonth(v) {
+    this._selectedMonth = v;
+    this._updateMonthNav();
+  }
+
+  set selectedYear(v) {
+    this._selectedYear = v;
+    this._updateMonthNav();
+  }
+
   _updateRefreshBtn() {
     const btn = this.shadowRoot.getElementById("refreshBtn");
     if (!btn) return;
@@ -79,6 +93,45 @@ class FdHeader extends HTMLElement {
   disconnectedCallback() {
     if (this._timestampTimer) clearInterval(this._timestampTimer);
     if (this._toastTimer) clearTimeout(this._toastTimer);
+  }
+
+  _navigateMonth(delta) {
+    let m = this._selectedMonth + delta;
+    let y = this._selectedYear;
+    if (m < 1) { m = 12; y--; }
+    if (m > 12) { m = 1; y++; }
+    // Clamp to current month — no future navigation
+    const now = new Date();
+    const nowM = now.getMonth() + 1;
+    const nowY = now.getFullYear();
+    if (y > nowY || (y === nowY && m > nowM)) return;
+    this._selectedMonth = m;
+    this._selectedYear = y;
+    this._updateMonthNav();
+    this.dispatchEvent(new CustomEvent("fd-month-changed", {
+      detail: { month: this._selectedMonth, year: this._selectedYear },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _updateMonthNav() {
+    const labelEl = this.shadowRoot.getElementById("monthLabel");
+    const nextBtn = this.shadowRoot.getElementById("nextMonthBtn");
+    if (!labelEl) return;
+    const lang = (window._fd._hass && window._fd._hass.language) || navigator.language || "en";
+    const d = new Date(this._selectedYear, this._selectedMonth - 1, 1);
+    const label = d.toLocaleDateString(lang, { month: "short", year: "numeric" });
+    labelEl.textContent = label;
+    labelEl.setAttribute("aria-label",
+      window._fd.tSync("header.month_aria", { month: label }));
+    // Disable next button when already at current month
+    if (nextBtn) {
+      const now = new Date();
+      const atCurrent = this._selectedYear === now.getFullYear()
+        && this._selectedMonth === now.getMonth() + 1;
+      nextBtn.disabled = atCurrent;
+    }
   }
 
   _scheduleTimestampTick() {
@@ -207,17 +260,42 @@ h1 {
   background: color-mix(in srgb, var(--demo) 85%, black);
   border-color: color-mix(in srgb, var(--demo) 85%, black);
 }
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .month-label {
-  padding: 7px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--bd);
+  padding: 7px 10px;
+  border-radius: 0;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+  border-left: none;
+  border-right: none;
   background: var(--sf);
   color: var(--tx2);
   font-size: 13px;
+  min-width: 90px;
+  text-align: center;
   cursor: default;
   user-select: none;
   font-family: inherit;
 }
+.btn-nav {
+  padding: 7px 9px;
+  border-radius: 0;
+  border: 1px solid var(--bd);
+  background: var(--sf);
+  color: var(--tx2);
+  font-size: 15px;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.btn-nav:first-child { border-radius: 10px 0 0 10px; }
+.btn-nav:last-child  { border-radius: 0 10px 10px 0; }
+.btn-nav:hover:not(:disabled) { background: var(--sf2); color: var(--tx); }
+.btn-nav:disabled { opacity: .35; cursor: default; }
 .ts-stack {
   display: flex;
   flex-direction: column;
@@ -283,7 +361,11 @@ h1 {
       <span class="ts-stats" id="tsStats"></span>
     </div>
     <button class="btn btn-demo" id="demoBtn" aria-label="${tSync("header.demo_toggle")}" aria-pressed="false">${tSync("header.demo_off")}</button>
-    <span class="month-label" id="monthLabel" aria-label="${tSync("header.month_aria", { month: monthLabel })}">${monthLabel}</span>
+    <div class="month-nav">
+      <button class="btn-nav" id="prevMonthBtn" aria-label="${tSync("header.prev_month")}">&#8249;</button>
+      <span class="month-label" id="monthLabel" aria-label="${tSync("header.month_aria", { month: monthLabel })}">${monthLabel}</span>
+      <button class="btn-nav" id="nextMonthBtn" aria-label="${tSync("header.next_month")}" disabled>&#8250;</button>
+    </div>
     <button class="btn btn-p" id="refreshBtn">${tSync("header.refresh.button")}</button>
     <button class="btn" id="addAccountBtn" title="${tSync("header.add_account_title")}">${tSync("header.add_account")}</button>
   </div>
@@ -296,6 +378,12 @@ h1 {
           composed: true,
         }));
       });
+
+    this.shadowRoot.getElementById("prevMonthBtn")
+      .addEventListener("click", () => this._navigateMonth(-1));
+
+    this.shadowRoot.getElementById("nextMonthBtn")
+      .addEventListener("click", () => this._navigateMonth(1));
 
     this.shadowRoot.getElementById("demoBtn")
       .addEventListener("click", () => {

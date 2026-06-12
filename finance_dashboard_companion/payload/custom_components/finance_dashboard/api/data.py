@@ -196,12 +196,20 @@ class FinanceDashboardSummaryView(HomeAssistantView):
     requires_auth = True
 
     async def get(self, request: web.Request) -> web.Response:
-        """Get monthly spending summary."""
+        """Get monthly spending summary. Accepts ?month=M&year=Y for history."""
         hass = request.app["hass"]
         manager = _get_manager(hass)
 
         if not manager:
             return self.json({"error": "Not configured"}, status_code=404)
 
-        summary = await manager.async_get_monthly_summary()
+        try:
+            month = int(request.rel_url.query["month"]) if "month" in request.rel_url.query else None
+            year = int(request.rel_url.query["year"]) if "year" in request.rel_url.query else None
+            if month is not None and not (1 <= month <= 12):
+                return self.json({"error": "month must be 1-12"}, status_code=400)
+        except ValueError:
+            return self.json({"error": "month and year must be integers"}, status_code=400)
+
+        summary = await manager.async_get_monthly_summary(month=month, year=year)
         return self.json(summary)

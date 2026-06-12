@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.util import dt as dt_util
 
+from ..const import HISTORY_RETENTION_MONTHS
+
 if TYPE_CHECKING:
     pass
 
@@ -230,8 +232,19 @@ class RefreshMixin:
                     txn["_status"] = "pending"
                     txn["category"] = categorizer.categorize(txn) if categorizer else "other"
 
-                # R5: atomic per-account update — only overwrite on success
-                self._tx_by_account[account_id] = booked + pending
+                # Accumulate: keep historical booked txns outside the fetch
+                # window, merge with fresh data, prune beyond retention limit.
+                retention_cutoff = (
+                    dt_util.now() - timedelta(days=HISTORY_RETENTION_MONTHS * 30)
+                ).strftime("%Y-%m-%d")
+                existing = self._tx_by_account.get(account_id, [])
+                historical_booked = [
+                    t for t in existing
+                    if t.get("_status") == "booked"
+                    and t.get("bookingDate", "") < date_from
+                    and t.get("bookingDate", "") >= retention_cutoff
+                ]
+                self._tx_by_account[account_id] = historical_booked + booked + pending
 
                 _LOGGER.debug(
                     "Account %s: %d booked, %d pending",

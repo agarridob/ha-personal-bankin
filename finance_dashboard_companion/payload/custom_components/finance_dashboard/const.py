@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.16.1"
+VERSION = "0.17.0"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -27,6 +27,7 @@ DEFAULT_COUNTRY = "DE"
 ENABLEBANKING_SANDBOX_URL = "https://api.enablebanking.com"
 TOKEN_MAX_AGE_DAYS = 90  # Force re-auth after 90 days (our own policy)
 SESSION_MAX_DAYS = 180  # Enable Banking session validity
+HISTORY_RETENTION_MONTHS = 24  # How far back to keep accumulated transactions
 SESSION_TIMEOUT_MINUTES = 30
 ENABLEBANKING_RATE_LIMIT_DAILY = 4
 
@@ -42,10 +43,6 @@ CATEGORY_LOANS = "loans"
 CATEGORY_UTILITIES = "utilities"
 CATEGORY_HEALTH = "health"
 CATEGORY_LEISURE = "leisure"
-CATEGORY_PETS = "pets"
-CATEGORY_CLOTHING = "clothing"
-CATEGORY_CHARITY = "charity"
-CATEGORY_CARDS = "cards"
 CATEGORY_INCOME = "income"
 CATEGORY_TRANSFERS = "transfers"
 CATEGORY_OTHER = "other"
@@ -61,10 +58,6 @@ DEFAULT_CATEGORIES = [
     CATEGORY_UTILITIES,
     CATEGORY_HEALTH,
     CATEGORY_LEISURE,
-    CATEGORY_PETS,
-    CATEGORY_CLOTHING,
-    CATEGORY_CHARITY,
-    CATEGORY_CARDS,
     CATEGORY_INCOME,
     CATEGORY_TRANSFERS,
     CATEGORY_OTHER,
@@ -239,62 +232,6 @@ CATEGORIZATION_RULES = {
         "zoo",
         "museo",
         "aquapark",
-    ],
-    CATEGORY_PETS: [
-        "veterinario",
-        "veterinaria",
-        "vet ",
-        "mascota",
-        "kiwoko",
-        "tiendanimal",
-        "zooplus",
-        "animalear",
-        "miscota",
-        "royal canin",
-        "pienso",
-        "dogs & cats",
-    ],
-    CATEGORY_CLOTHING: [
-        "zara",
-        "h&m",
-        "mango",
-        "primark",
-        "bershka",
-        "pull & bear",
-        "pull and bear",
-        "stradivarius",
-        "lefties",
-        "shein",
-        "massimo dutti",
-        "cortefiel",
-        "springfield",
-        "calzados",
-        "zapatos",
-        "textil",
-    ],
-    CATEGORY_CHARITY: [
-        "donacion",
-        "donación",
-        "unicef",
-        "medicos sin fronteras",
-        "médicos sin fronteras",
-        "cruz roja",
-        "caritas",
-        "cáritas",
-        "greenpeace",
-        "amnesty",
-        "oxfam",
-        "wwf ",
-        "save the children",
-        "acnur",
-    ],
-    CATEGORY_CARDS: [
-        "liquidacion tarjeta",
-        "liquidación tarjeta",
-        "cargo tarjeta",
-        "amortiz. tarjeta",
-        "cuota tarjeta",
-        "pago tarjeta",
     ],
     CATEGORY_INCOME: [
         "nomina",
