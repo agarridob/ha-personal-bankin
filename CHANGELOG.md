@@ -2,6 +2,13 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.18.0] — 2026-06-12
+
+### Added
+- Add 7-filter bar to fd-transactions-log — direction pills (all/income/expense), category dropdown, account dropdown (hidden when single account), text search on creditor/description, amount range (> € / < €), date range (from/to), pending-only toggle
+- Filter state preserved across list updates; count badge shows filtered/total when any filter is active; "Clear filters" button appears automatically
+- Add transactions.filter.* keys to en.json and es.json
+
 ## [0.17.0] — 2026-06-12
 
 ### Added

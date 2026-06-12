@@ -16,6 +16,12 @@
 
 
 
+
+## 0.18.0
+- Add 7-filter bar to fd-transactions-log — direction pills (all/income/expense), category dropdown, account dropdown (hidden when single account), text search on creditor/description, amount range (> € / < €), date range (from/to), pending-only toggle
+- Filter state preserved across list updates; count badge shows filtered/total when any filter is active; "Clear filters" button appears automatically
+- Add transactions.filter.* keys to en.json and es.json
+
 ## 0.17.0
 - Accumulate transaction history — each refresh merges new transactions into storage instead of overwriting; historical booked txns outside the 90-day fetch window are preserved up to 24 months (HISTORY_RETENTION_MONTHS)
 - /api/finance_dashboard/summary now accepts ?month=M&year=Y query params to serve any historical period from the accumulated cache without a live bank API call
