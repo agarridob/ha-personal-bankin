@@ -123,7 +123,7 @@ class FdBudgetConfig extends HTMLElement {
   getCardSize() { return 4; }
 }
 
-customElements.define("fd-budget-config", FdBudgetConfig);
+if (!customElements.get("fd-budget-config")) customElements.define("fd-budget-config", FdBudgetConfig);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

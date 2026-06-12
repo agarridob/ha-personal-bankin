@@ -118,6 +118,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEn
 
 async def async_unload_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEntry) -> bool:
     """Unload a config entry."""
+    from .panel import async_unregister_panel
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         manager = hass.data[DOMAIN].pop(entry.entry_id, None)
@@ -127,6 +129,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: FinanceDashboardConfigE
         # Clean up entry reference if it matches
         if hass.data.get(DOMAIN, {}).get("entry") is entry:
             hass.data[DOMAIN].pop("entry", None)
+        await async_unregister_panel(hass)
     return unload_ok
 
 

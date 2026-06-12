@@ -92,4 +92,4 @@ class FdPersonCard extends HTMLElement {
   }
 }
 
-customElements.define("fd-person-card", FdPersonCard);
+if (!customElements.get("fd-person-card")) customElements.define("fd-person-card", FdPersonCard);

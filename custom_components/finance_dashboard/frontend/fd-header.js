@@ -23,6 +23,7 @@ class FdHeader extends HTMLElement {
     this._lastRefreshStats = null;
     this._timestampTimer = null;
     this._toastTimer = null;
+    this._accountCount = 0;
     // Month navigation state — null means "current month"
     const now = new Date();
     this._selectedMonth = now.getMonth() + 1;
@@ -65,6 +66,12 @@ class FdHeader extends HTMLElement {
   set selectedYear(v) {
     this._selectedYear = v;
     this._updateMonthNav();
+  }
+
+  set accountCount(v) {
+    this._accountCount = v || 0;
+    const btn = this.shadowRoot.getElementById("editAccountsBtn");
+    if (btn) btn.style.display = this._accountCount > 0 ? "" : "none";
   }
 
   _updateRefreshBtn() {
@@ -212,6 +219,13 @@ h1 {
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
+.version-badge {
+  font-size: 10px;
+  color: var(--tx2);
+  opacity: 0.5;
+  font-family: monospace;
+  user-select: none;
+}
 .right {
   display: flex;
   align-items: center;
@@ -347,6 +361,7 @@ h1 {
 }
 `;
 
+    const version = (window._fd && window._fd.VERSION) ? window._fd.VERSION : "?";
     this.shadowRoot.innerHTML = `
 <style>${SHARED_CSS}${LOCAL_CSS}</style>
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -354,6 +369,7 @@ h1 {
   <div class="title-row">
     <h1>${tSync("header.title")}</h1>
     <span class="demo-badge" id="demoBadge">DEMO</span>
+    <span class="version-badge">v${version}</span>
   </div>
   <div class="right">
     <div class="ts-stack">
@@ -368,6 +384,7 @@ h1 {
     </div>
     <button class="btn btn-p" id="refreshBtn">${tSync("header.refresh.button")}</button>
     <button class="btn" id="addAccountBtn" title="${tSync("header.add_account_title")}">${tSync("header.add_account")}</button>
+    <button class="btn" id="editAccountsBtn" title="${tSync("header.edit_accounts_title")}" style="display:none">${tSync("header.edit_accounts")}</button>
   </div>
 </div>`;
 
@@ -396,6 +413,14 @@ h1 {
     this.shadowRoot.getElementById("addAccountBtn")
       .addEventListener("click", () => {
         this.dispatchEvent(new CustomEvent("fd-open-wizard", {
+          bubbles: true,
+          composed: true,
+        }));
+      });
+
+    this.shadowRoot.getElementById("editAccountsBtn")
+      .addEventListener("click", () => {
+        this.dispatchEvent(new CustomEvent("fd-open-edit-wizard", {
           bubbles: true,
           composed: true,
         }));
@@ -482,4 +507,4 @@ h1 {
   }
 }
 
-customElements.define("fd-header", FdHeader);
+if (!customElements.get("fd-header")) customElements.define("fd-header", FdHeader);

@@ -2,6 +2,14 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.19.0] — 2026-06-12
+
+### Added
+- Add "Edit accounts" button to fd-header — visible only when at least one account is linked; dispatches fd-open-edit-wizard event
+- Add edit mode to fd-setup-wizard — opens at step 3 with existing accounts loaded from setup/status; calls POST setup/update_accounts on save; dispatches fd-accounts-updated on success
+- Fd-accounts-updated triggers data rebuild in panel so display names refresh immediately after saving
+- Add wizard.edit_title, wizard.step.3.edit_subtitle, wizard.step.3.save, wizard.step.4.edit_title, wizard.step.4.edit_body, header.edit_accounts, header.edit_accounts_title to en.json and es.json
+
 ## [0.18.0] — 2026-06-12
 
 ### Added

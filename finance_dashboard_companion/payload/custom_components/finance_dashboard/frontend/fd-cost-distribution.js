@@ -43,7 +43,7 @@ class FdCostDistribution extends HTMLElement {
     const totalExp = d.summary?.totalExpenses || 0;
 
     const sorted = Object.entries(cats)
-      .filter(([k]) => k !== "income" && k !== "transfers")
+      .filter(([k]) => k !== "income" && k !== "transfers" && k !== "excluded")
       .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
     const costBar = sorted.map(([cat, amt]) => {
@@ -123,4 +123,4 @@ class FdCostDistribution extends HTMLElement {
   }
 }
 
-customElements.define("fd-cost-distribution", FdCostDistribution);
+if (!customElements.get("fd-cost-distribution")) customElements.define("fd-cost-distribution", FdCostDistribution);

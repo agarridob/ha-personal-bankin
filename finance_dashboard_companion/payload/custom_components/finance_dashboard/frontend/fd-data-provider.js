@@ -573,4 +573,4 @@ class FdDataProvider extends HTMLElement {
   }
 }
 
-customElements.define("fd-data-provider", FdDataProvider);
+if (!customElements.get("fd-data-provider")) customElements.define("fd-data-provider", FdDataProvider);

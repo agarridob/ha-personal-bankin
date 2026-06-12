@@ -17,6 +17,13 @@
 
 
 
+
+## 0.19.0
+- Add "Edit accounts" button to fd-header — visible only when at least one account is linked; dispatches fd-open-edit-wizard event
+- Add edit mode to fd-setup-wizard — opens at step 3 with existing accounts loaded from setup/status; calls POST setup/update_accounts on save; dispatches fd-accounts-updated on success
+- Fd-accounts-updated triggers data rebuild in panel so display names refresh immediately after saving
+- Add wizard.edit_title, wizard.step.3.edit_subtitle, wizard.step.3.save, wizard.step.4.edit_title, wizard.step.4.edit_body, header.edit_accounts, header.edit_accounts_title to en.json and es.json
+
 ## 0.18.0
 - Add 7-filter bar to fd-transactions-log — direction pills (all/income/expense), category dropdown, account dropdown (hidden when single account), text search on creditor/description, amount range (> € / < €), date range (from/to), pending-only toggle
 - Filter state preserved across list updates; count badge shows filtered/total when any filter is active; "Clear filters" button appears automatically

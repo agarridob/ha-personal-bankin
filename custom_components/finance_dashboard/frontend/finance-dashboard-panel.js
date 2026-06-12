@@ -201,11 +201,25 @@ class FinanceDashboardPanel extends HTMLElement {
       this._openSetupWizard();
     });
 
+    this.shadowRoot.addEventListener("fd-open-edit-wizard", () => {
+      this._openEditAccountsWizard();
+    });
+
     this.shadowRoot.addEventListener("fd-setup-complete", () => {
       // Delay registry refresh — HA reloads the config entry asynchronously
       // after setup/complete (1s deferred_reload in api.py). Wait for it.
       const dp = this.shadowRoot.querySelector("fd-data-provider");
       if (dp) setTimeout(() => dp.refreshRegistry(), 4000);
+    });
+
+    this.shadowRoot.addEventListener("fd-accounts-updated", () => {
+      // Account metadata changed (name, type, person) — no new entities,
+      // just trigger a data rebuild to refresh display names.
+      const dp = this.shadowRoot.querySelector("fd-data-provider");
+      if (dp) {
+        dp._prevStateHash = "";
+        dp._rebuild();
+      }
     });
 
     this.shadowRoot.addEventListener("fd-setup-closed", () => {
@@ -264,6 +278,14 @@ class FinanceDashboardPanel extends HTMLElement {
     if (components) components.classList.remove("hidden");
   }
 
+  _openEditAccountsWizard() {
+    if (this.shadowRoot.querySelector("fd-setup-wizard")) return;
+    const wizard = document.createElement("fd-setup-wizard");
+    wizard.hass = this._hass;
+    wizard.editMode = true;
+    this.shadowRoot.appendChild(wizard);
+  }
+
   async _openSetupWizard() {
     // Prevent duplicate wizard
     if (this.shadowRoot.querySelector("fd-setup-wizard")) return;
@@ -295,7 +317,7 @@ class FinanceDashboardPanel extends HTMLElement {
   _onData(data) {
     const { tSync } = window._fd;
 
-    // Update header timestamp, rate limit, and demo state
+    // Update header timestamp, rate limit, demo state and account count
     const header = this.shadowRoot.querySelector("fd-header");
     if (header) {
       header.lastRefresh = data.lastRefresh;
@@ -305,6 +327,9 @@ class FinanceDashboardPanel extends HTMLElement {
       // Sync month display when data comes from entity state (current month)
       if (data.summary?.month) header.selectedMonth = data.summary.month;
       if (data.summary?.year) header.selectedYear = data.summary.year;
+      // Show edit-accounts button when accounts are linked or demo mode is active
+      // (demo mode implies accounts are configured)
+      header.accountCount = (data.accountCount || 0) > 0 || data.demoMode ? 1 : 0;
     }
 
     // Loading state (e.g. during demo toggle)
@@ -383,4 +408,4 @@ class FinanceDashboardPanel extends HTMLElement {
   }
 }
 
-customElements.define("finance-dashboard-panel", FinanceDashboardPanel);
+if (!customElements.get("finance-dashboard-panel")) customElements.define("finance-dashboard-panel", FinanceDashboardPanel);

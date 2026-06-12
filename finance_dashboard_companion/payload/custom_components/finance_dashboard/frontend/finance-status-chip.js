@@ -311,8 +311,8 @@ class FinanceStatusChipEditor extends HTMLElement {
   }
 }
 
-customElements.define("finance-status-chip", FinanceStatusChip);
-customElements.define("finance-status-chip-editor", FinanceStatusChipEditor);
+if (!customElements.get("finance-status-chip")) customElements.define("finance-status-chip", FinanceStatusChip);
+if (!customElements.get("finance-status-chip-editor")) customElements.define("finance-status-chip-editor", FinanceStatusChipEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
