@@ -1,5 +1,13 @@
 # Build Log
 
+## 0.16.1 — 2026-06-12
+Version: 0.16.1
+Branch: fix/categorize-i18n
+Changes:
+- fix(i18n): switch fd-categorize.js from tSync() to await t() — prevents instruction and admin-only strings rendering as raw keys on first load
+- fix(i18n): cache-bust locale fetch in fd-shared-styles.js using ?v= from module URL so updated locale files are picked up after version bumps
+- chore(docs): document local HA instance SSH alias and deploy command in CLAUDE.md
+
 ## 0.16.0 — 2026-06-12
 Version: 0.16.0
 Branch: fix/categorize-i18n

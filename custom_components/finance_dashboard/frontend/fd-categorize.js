@@ -75,11 +75,10 @@ class FdCategorize extends HTMLElement {
 
   async _load() {
     if (!this._hass) return;
-    const t = window._fd.tSync;
     const instrEl = this.querySelector("#fdc-instructions");
     const adminEl = this.querySelector("#fdc-admin-only");
-    if (instrEl) instrEl.textContent = t("categorize.instructions");
-    if (adminEl) adminEl.textContent = t("categorize.admin_only");
+    if (instrEl) instrEl.textContent = await window._fd.t("categorize.instructions");
+    if (adminEl) adminEl.textContent = await window._fd.t("categorize.admin_only");
     try {
       const data = await this._hass.callApi("GET", "finance_dashboard/transactions");
       if (data.privacy === "aggregate_only") {

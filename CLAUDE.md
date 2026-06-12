@@ -189,7 +189,19 @@ python scripts/sync_changelog.py --version X.Y.Z  # Sync specific version
 # Validation (same as CI)
 python -m py_compile custom_components/finance_dashboard/__init__.py
 node --check custom_components/finance_dashboard/frontend/finance-dashboard-panel.js
+
+# Deploy to local HA for testing (no release needed)
+scp -r custom_components/finance_dashboard/ ha-remote:/config/custom_components/finance_dashboard/
+# Then reload the integration in HA: Settings → Integrations → Personal Bankin → ⋮ → Reload
 ```
+
+## Local HA Instance
+
+- **SSH alias**: `ha-remote` → `root@192.168.0.103:22222` (configured in `~/.ssh/config`)
+- **Integration path on HA**: `/config/custom_components/finance_dashboard/`
+- **SSH add-on**: Terminal & SSH, port 22222, key-based auth (no password)
+- **`rsync` not available** in the HA container — use `scp -r` instead
+- After deploying: reload via HA UI, no full restart needed for Python/JS changes
 
 ## Development Phases
 

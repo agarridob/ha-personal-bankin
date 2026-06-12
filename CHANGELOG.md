@@ -2,6 +2,15 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.16.1] — 2026-06-12
+
+### Changed
+- Chore(docs): document local HA instance SSH alias and deploy command in CLAUDE.md
+
+### Fixed
+- Switch fd-categorize.js from tSync() to await t() — prevents instruction and admin-only strings rendering as raw keys on first load
+- Cache-bust locale fetch in fd-shared-styles.js using ?v= from module URL so updated locale files are picked up after version bumps
+
 ## [0.16.0] — 2026-06-12
 
 ### Added
