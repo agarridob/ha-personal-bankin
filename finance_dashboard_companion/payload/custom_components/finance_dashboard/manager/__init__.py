@@ -225,7 +225,28 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             raw_tx_by_account = cached.get("tx_by_account")
             if isinstance(raw_tx_by_account, dict):
                 self._tx_by_account = raw_tx_by_account
-                self._transactions = [tx for txs in self._tx_by_account.values() for tx in txs]
+                # Deduplicate by transactionId — the same physical account may be
+                # linked under multiple session IDs, causing identical transactions
+                # in separate buckets.
+                seen_ids: set[str] = set()
+                deduped: list[dict] = []
+                for txs in self._tx_by_account.values():
+                    for tx in txs:
+                        tid = tx.get("transactionId")
+                        if tid:
+                            if tid in seen_ids:
+                                continue
+                            seen_ids.add(tid)
+                        deduped.append(tx)
+                raw_total = sum(len(v) for v in self._tx_by_account.values())
+                if raw_total != len(deduped):
+                    _LOGGER.warning(
+                        "Deduplicated %d duplicate transactions on load "
+                        "(total=%d, unique=%d). Same bank account may be "
+                        "linked under multiple Enable Banking sessions.",
+                        raw_total - len(deduped), raw_total, len(deduped),
+                    )
+                self._transactions = deduped
                 # Deterministic sort after flatten
                 self._transactions.sort(key=lambda t: t.get("bookingDate", ""), reverse=True)
             else:
@@ -424,6 +445,11 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         for txn in monthly_txns:
             amount = float(txn.get("transactionAmount", {}).get("amount", 0))
             category = txn.get("category", "other")
+
+            # excluded transactions are intentionally non-computable (internal
+            # transfers, ignored items) — skip entirely from income/expenses/categories
+            if category == "excluded":
+                continue
 
             if amount > 0:
                 total_income += amount
@@ -725,6 +751,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             acc_type = txn.get("_account_type", "personal")
             person = txn.get("_account_person", "")
             category = txn.get("category", "other")
+
+            if category == "excluded":
+                continue
 
             if acc_type == "shared":
                 # Shared account — costs are split among all members

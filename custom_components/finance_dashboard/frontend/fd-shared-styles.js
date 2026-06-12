@@ -60,6 +60,7 @@ export const CAT_COLORS = {
   cards: "#64748b",
   income: "#4ecca3",
   transfers: "#6b7280",
+  excluded: "#9ca3af",
   other: "#6b7280",
 };
 
@@ -188,9 +189,7 @@ a:focus:not(:focus-visible),
  */
 const _i18nCache = {};
 
-const _FD_VERSION = (() => {
-  try { return new URL(import.meta.url).searchParams.get("v") || "0"; } catch (_) { return "0"; }
-})();
+const _FD_VERSION = "0.19.0";
 
 async function _loadLocale(lang) {
   if (_i18nCache[lang]) return _i18nCache[lang];
@@ -260,6 +259,7 @@ window._fd = {
   SHARED_CSS,
   t,
   tSync,
+  VERSION: _FD_VERSION,
   _hass: null,  // Set by panel shell: window._fd._hass = hass
 };
 

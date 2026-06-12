@@ -43,6 +43,7 @@ class FdSetupWizard extends HTMLElement {
     this._error = null;
     this._loading = false;
     this._initialStep = 1; // Override with initialStep property
+    this._editMode = false; // When true, opens at step 3 editing existing accounts
     this._boundTrapFocus = this._trapFocus.bind(this);
     this._boundEsc = this._handleEsc.bind(this);
   }
@@ -52,15 +53,25 @@ class FdSetupWizard extends HTMLElement {
     this._initialStep = parseInt(v) || 1;
   }
 
+  /** When true, wizard opens at step 3 to edit existing accounts (no bank auth). */
+  set editMode(v) {
+    this._editMode = !!v;
+  }
+
   set hass(hass) {
     this._hass = hass;
   }
 
   connectedCallback() {
-    this._step = this._initialStep;
-    this._render();
-    // If opening at step 1 or at step 2 (add-account flow), load institutions
-    this._loadInstitutions();
+    if (this._editMode) {
+      this._step = 3;
+      this._render();
+      this._loadExistingAccounts();
+    } else {
+      this._step = this._initialStep;
+      this._render();
+      this._loadInstitutions();
+    }
     document.addEventListener("keydown", this._boundTrapFocus);
     document.addEventListener("keydown", this._boundEsc);
     // Move focus into modal after render
@@ -145,6 +156,68 @@ class FdSetupWizard extends HTMLElement {
 
   async _loadUsers() {
     // Reserved for future HA user picker (currently person is free-text)
+  }
+
+  /** Edit mode: load existing stored accounts from setup/status. */
+  async _loadExistingAccounts() {
+    if (!this._hass) return;
+    this._loading = true;
+    this._error = null;
+    this._renderContent();
+    try {
+      const status = await this._hass.callApi("GET", `${DOMAIN}/setup/status`);
+      this._pendingAccounts = (status.accounts || []).map((acc) => ({
+        id: acc.id,
+        name: acc.name,
+        custom_name: acc.custom_name || acc.name || "",
+        type: acc.type || "personal",
+        person: acc.person || "",
+        ha_users: acc.ha_users || [],
+        logo: acc.logo || "",
+        iban: acc.iban_masked || "****",
+      }));
+    } catch (e) {
+      this._error = (e && (e.error || e.message)) || String(e);
+    } finally {
+      this._loading = false;
+      this._renderContent();
+    }
+  }
+
+  /** Edit mode: persist changes via update_accounts endpoint. */
+  async _saveAccountEdits() {
+    this._loading = true;
+    this._error = null;
+    this._renderContent();
+
+    const accounts = this._pendingAccounts.map((acc) => ({
+      id: acc.id,
+      custom_name: acc.custom_name,
+      type: acc.type,
+      person: acc.person,
+      ha_users: acc.ha_users,
+    }));
+
+    try {
+      const result = await this._hass.callApi("POST", `${DOMAIN}/setup/update_accounts`, { accounts });
+      if (result.error) {
+        this._error = result.error;
+        this._loading = false;
+        this._renderContent();
+        return;
+      }
+      this._loading = false;
+      this._step = 4;
+      this._renderContent();
+      this.dispatchEvent(new CustomEvent("fd-accounts-updated", {
+        bubbles: true,
+        composed: true,
+      }));
+    } catch (e) {
+      this._error = (e && (e.error || e.message)) || String(e);
+      this._loading = false;
+      this._renderContent();
+    }
   }
 
   async _authorize(institution) {
@@ -317,6 +390,7 @@ class FdSetupWizard extends HTMLElement {
 
   _render() {
     const { tSync } = window._fd;
+    const wizardTitle = this._editMode ? tSync("wizard.edit_title") : tSync("wizard.title");
     this.shadowRoot.innerHTML = `
 <style>
 :host {
@@ -588,7 +662,7 @@ class FdSetupWizard extends HTMLElement {
 <div class="backdrop"></div>
 <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
   <div class="modal-header">
-    <h2 id="wizard-title">${tSync("wizard.title")}</h2>
+    <h2 id="wizard-title">${wizardTitle}</h2>
     <button class="close-btn" id="closeBtn" aria-label="${tSync("wizard.close")}">&times;</button>
   </div>
   <div class="modal-body" id="body"></div>
@@ -606,12 +680,22 @@ class FdSetupWizard extends HTMLElement {
     const body = this.shadowRoot.getElementById("body");
     if (!body) return;
 
-    // Step indicators
-    const stepsHtml = `<div class="steps">
-      ${[1, 2, 3, 4].map((s) =>
-        `<div class="step-dot ${s === this._step ? "active" : s < this._step ? "done" : ""}"></div>`
-      ).join("")}
-    </div>`;
+    // In edit mode show 2 dots (editing → saved); in setup mode show 4
+    let stepsHtml;
+    if (this._editMode) {
+      const editDot = this._step === 4 ? 2 : 1;
+      stepsHtml = `<div class="steps">
+        ${[1, 2].map((s) =>
+          `<div class="step-dot ${s === editDot ? "active" : s < editDot ? "done" : ""}"></div>`
+        ).join("")}
+      </div>`;
+    } else {
+      stepsHtml = `<div class="steps">
+        ${[1, 2, 3, 4].map((s) =>
+          `<div class="step-dot ${s === this._step ? "active" : s < this._step ? "done" : ""}"></div>`
+        ).join("")}
+      </div>`;
+    }
 
     const errorHtml = this._error
       ? `<div class="error-msg">${this._esc(this._error)}</div>`
@@ -763,9 +847,13 @@ class FdSetupWizard extends HTMLElement {
 
   _renderStep3() {
     const { tSync } = window._fd;
+    if (this._loading) {
+      return `<div class="loading-spinner">${tSync("common.loading")}</div>`;
+    }
     const accountCards = this._pendingAccounts.map((acc, idx) => {
+      // In edit mode iban field is already masked from the API
       const iban = acc.iban || "";
-      const ibanMasked = iban.length >= 4 ? `****${iban.slice(-4)}` : "****";
+      const ibanMasked = this._editMode ? iban : (iban.length >= 4 ? `****${iban.slice(-4)}` : "****");
 
       return `
         <div class="account-card" data-idx="${idx}">
@@ -799,14 +887,24 @@ class FdSetupWizard extends HTMLElement {
       `;
     }).join("");
 
+    const subtitle = this._editMode
+      ? tSync("wizard.step.3.edit_subtitle", { count: String(this._pendingAccounts.length) })
+      : tSync("wizard.step.3.found", { count: String(this._pendingAccounts.length) });
+    const actionBtn = this._editMode
+      ? tSync("wizard.step.3.save")
+      : tSync("wizard.step.3.connect");
+    const backBtnHtml = this._editMode
+      ? ""
+      : `<button class="btn-secondary" id="backBtn">${tSync("wizard.step.3.back")}</button>`;
+
     return `
       <p style="margin:0 0 16px;color:var(--secondary-text-color);font-size:13px;">
-        ${tSync("wizard.step.3.found", { count: String(this._pendingAccounts.length) })}
+        ${subtitle}
       </p>
       ${accountCards}
       <div class="actions">
-        <button class="btn-secondary" id="backBtn">${tSync("wizard.step.3.back")}</button>
-        <button class="btn-primary" id="completeBtn">${tSync("wizard.step.3.connect")}</button>
+        ${backBtnHtml}
+        <button class="btn-primary" id="completeBtn">${actionBtn}</button>
       </div>
     `;
   }
@@ -841,18 +939,24 @@ class FdSetupWizard extends HTMLElement {
 
     const completeBtn = this.shadowRoot.getElementById("completeBtn");
     if (completeBtn) {
-      completeBtn.addEventListener("click", () => this._completeSetup());
+      completeBtn.addEventListener("click", () =>
+        this._editMode ? this._saveAccountEdits() : this._completeSetup()
+      );
     }
   }
 
   _renderStep4() {
     const { tSync } = window._fd;
     const count = this._pendingAccounts.length;
+    const title = this._editMode ? tSync("wizard.step.4.edit_title") : tSync("wizard.step.4.title");
+    const body = this._editMode
+      ? tSync("wizard.step.4.edit_body", { count: String(count) })
+      : tSync("wizard.step.4.body", { count: String(count) });
     return `
       <div class="success-card">
         <div class="icon">&#x2705;</div>
-        <h3>${tSync("wizard.step.4.title")}</h3>
-        <p>${tSync("wizard.step.4.body", { count: String(count) })}</p>
+        <h3>${title}</h3>
+        <p>${body}</p>
         <button class="btn-primary" id="doneBtn">${tSync("wizard.step.4.done")}</button>
       </div>
     `;
@@ -871,4 +975,4 @@ class FdSetupWizard extends HTMLElement {
   }
 }
 
-customElements.define("fd-setup-wizard", FdSetupWizard);
+if (!customElements.get("fd-setup-wizard")) customElements.define("fd-setup-wizard", FdSetupWizard);

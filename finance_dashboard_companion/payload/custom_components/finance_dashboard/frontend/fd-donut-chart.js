@@ -34,17 +34,20 @@ class FdDonutChart extends HTMLElement {
       style: "currency", currency: "EUR",
     }).format(v || 0);
 
-    // Sort categories by absolute amount, exclude income/transfers
+    // Sort categories by absolute amount, exclude income/transfers/excluded
     const sorted = Object.entries(categories)
-      .filter(([k]) => k !== "income" && k !== "transfers")
+      .filter(([k]) => k !== "income" && k !== "transfers" && k !== "excluded")
       .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
+    // Use the sum of displayed categories so the ring fills completely
+    const displayedTotal = sorted.reduce((s, [, v]) => s + Math.abs(v), 0);
 
     // Build SVG donut segments
     let donutSvg = `<circle cx="50" cy="50" r="40" fill="none" stroke="var(--sf2, #222236)" stroke-width="12"/>`;
     let offset = 0;
     const circ = 2 * Math.PI * 40;
     for (const [cat, amt] of sorted) {
-      const p = totalExpenses > 0 ? Math.abs(amt) / totalExpenses : 0;
+      const p = displayedTotal > 0 ? Math.abs(amt) / displayedTotal : 0;
       const len = p * circ;
       donutSvg += `<circle cx="50" cy="50" r="40" fill="none"
         stroke="${catColors[cat] || "#6b7280"}" stroke-width="12"
@@ -55,7 +58,7 @@ class FdDonutChart extends HTMLElement {
 
     // Category legend
     const catList = sorted.map(([cat, amt]) => {
-      const p = totalExpenses > 0 ? Math.round(Math.abs(amt) / totalExpenses * 100) : 0;
+      const p = displayedTotal > 0 ? Math.round(Math.abs(amt) / displayedTotal * 100) : 0;
       return `<li class="cat-item">
         <div class="cat-dot" style="background:${catColors[cat] || "#6b7280"}"></div>
         <span class="cat-n">${escHtml(catLabels[cat] || cat)}</span>
@@ -67,14 +70,14 @@ class FdDonutChart extends HTMLElement {
     // Build aria-label from sorted categories
     const ariaLabel = sorted.length
       ? tSync("donut.aria", { list: "" }) + sorted.map(([cat, amt]) => {
-          const p = totalExpenses > 0 ? Math.round(Math.abs(amt) / totalExpenses * 100) : 0;
+          const p = displayedTotal > 0 ? Math.round(Math.abs(amt) / displayedTotal * 100) : 0;
           return `${escHtml(catLabels[cat] || cat)} ${p}%`;
         }).join(", ")
       : tSync("donut.no_expenses");
 
     // Visually-hidden table for screen-readers
     const tableRows = sorted.map(([cat, amt]) => {
-      const p = totalExpenses > 0 ? Math.round(Math.abs(amt) / totalExpenses * 100) : 0;
+      const p = displayedTotal > 0 ? Math.round(Math.abs(amt) / displayedTotal * 100) : 0;
       return `<tr><td>${escHtml(catLabels[cat] || cat)}</td><td>${eur(Math.abs(amt))}</td><td>${p}%</td></tr>`;
     }).join("");
 
@@ -132,7 +135,7 @@ class FdDonutChart extends HTMLElement {
   <div class="donut">
     <svg viewBox="0 0 100 100" role="img" aria-label="${ariaLabel}">${donutSvg}</svg>
     <div class="donut-c" aria-hidden="true">
-      <div class="v">${eur(totalExpenses)}</div>
+      <div class="v">${eur(displayedTotal)}</div>
       <div class="l">${tSync("donut.total")}</div>
     </div>
   </div>
@@ -146,4 +149,4 @@ class FdDonutChart extends HTMLElement {
   }
 }
 
-customElements.define("fd-donut-chart", FdDonutChart);
+if (!customElements.get("fd-donut-chart")) customElements.define("fd-donut-chart", FdDonutChart);

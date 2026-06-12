@@ -1,5 +1,14 @@
 # Build Log
 
+## 0.19.0 — 2026-06-12
+Version: 0.19.0
+Branch: feat/edit-accounts
+Changes:
+- feat(frontend): add "Edit accounts" button to fd-header — visible only when at least one account is linked; dispatches fd-open-edit-wizard event
+- feat(frontend): add edit mode to fd-setup-wizard — opens at step 3 with existing accounts loaded from setup/status; calls POST setup/update_accounts on save; dispatches fd-accounts-updated on success
+- feat(frontend): fd-accounts-updated triggers data rebuild in panel so display names refresh immediately after saving
+- feat(i18n): add wizard.edit_title, wizard.step.3.edit_subtitle, wizard.step.3.save, wizard.step.4.edit_title, wizard.step.4.edit_body, header.edit_accounts, header.edit_accounts_title to en.json and es.json
+
 ## 0.18.0 — 2026-06-12
 Version: 0.18.0
 Branch: feat/transactions-filter

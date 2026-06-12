@@ -120,4 +120,4 @@ class FdHouseholdSection extends HTMLElement {
   }
 }
 
-customElements.define("fd-household-section", FdHouseholdSection);
+if (!customElements.get("fd-household-section")) customElements.define("fd-household-section", FdHouseholdSection);

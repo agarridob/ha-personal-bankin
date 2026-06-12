@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.18.0"
+VERSION = "0.19.0"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -46,6 +46,7 @@ CATEGORY_LEISURE = "leisure"
 CATEGORY_INCOME = "income"
 CATEGORY_TRANSFERS = "transfers"
 CATEGORY_OTHER = "other"
+CATEGORY_EXCLUDED = "excluded"  # User-marked as non-computable (internal transfers, ignored txns)
 
 DEFAULT_CATEGORIES = [
     CATEGORY_HOUSING,
@@ -60,6 +61,7 @@ DEFAULT_CATEGORIES = [
     CATEGORY_LEISURE,
     CATEGORY_INCOME,
     CATEGORY_TRANSFERS,
+    CATEGORY_EXCLUDED,
     CATEGORY_OTHER,
 ]
 
