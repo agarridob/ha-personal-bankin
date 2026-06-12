@@ -55,7 +55,7 @@
   "header.ts.rate": "Daily limit reached — using cache",
   "header.ts.rate_next": "New requests from $date 00:00",
   "header.ts.empty": "No data yet — click \"Refresh\"",
-  "header.ts.last": "Last: $time ($age)",
+  "header.ts.last": "Refreshed: $time ($age)",
   "header.ts.age.now": "just now",
   "header.ts.age.min": "$n min ago",
   "header.ts.age.hour": "$n hr ago",
