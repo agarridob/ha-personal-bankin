@@ -327,8 +327,9 @@ class FinanceDashboardPanel extends HTMLElement {
       // Sync month display when data comes from entity state (current month)
       if (data.summary?.month) header.selectedMonth = data.summary.month;
       if (data.summary?.year) header.selectedYear = data.summary.year;
-      // Show/hide edit-accounts button based on whether any accounts are linked
-      header.accountCount = data.accountCount || 0;
+      // Show edit-accounts button when accounts are linked or demo mode is active
+      // (demo mode implies accounts are configured)
+      header.accountCount = (data.accountCount || 0) > 0 || data.demoMode ? 1 : 0;
     }
 
     // Loading state (e.g. during demo toggle)
