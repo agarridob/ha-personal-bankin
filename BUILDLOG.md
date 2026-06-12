@@ -1,5 +1,13 @@
 # Build Log
 
+## 0.19.1 — 2026-06-12
+Version: 0.19.1
+Branch: fix/header-demo-button-labels
+Changes:
+- fix(frontend): hide demo button in fd-header when demo mode is inactive; button only shows when demo is running so users can stop it
+- fix(i18n): rename "Actualizar" to "Refrescar" in Spanish header button and empty-state hint
+- fix(i18n): change timestamp label from "Última:" (es) / "Last:" (en) to "Refrescado:" / "Refreshed:" in both locales
+
 ## 0.19.0 — 2026-06-12
 Version: 0.19.0
 Branch: feat/edit-accounts

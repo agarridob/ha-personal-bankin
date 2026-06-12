@@ -168,13 +168,15 @@ class FdHeader extends HTMLElement {
     const badge = this.shadowRoot.getElementById("demoBadge");
     if (!btn) return;
     const { tSync } = window._fd;
-    btn.setAttribute("aria-pressed", String(this._demoMode));
     if (this._demoMode) {
+      btn.style.display = "";
+      btn.setAttribute("aria-pressed", "true");
       btn.textContent = tSync("header.demo_on");
       btn.classList.add("btn-demo-active");
       if (badge) badge.style.display = "inline-block";
     } else {
-      btn.textContent = tSync("header.demo_off");
+      btn.style.display = "none";
+      btn.setAttribute("aria-pressed", "false");
       btn.classList.remove("btn-demo-active");
       if (badge) badge.style.display = "none";
     }

@@ -18,6 +18,12 @@
 
 
 
+
+## 0.19.1
+- Hide demo button in fd-header when demo mode is inactive; button only shows when demo is running so users can stop it
+- Rename "Actualizar" to "Refrescar" in Spanish header button and empty-state hint
+- Change timestamp label from "Última:" (es) / "Last:" (en) to "Refrescado:" / "Refreshed:" in both locales
+
 ## 0.19.0
 - Add "Edit accounts" button to fd-header — visible only when at least one account is linked; dispatches fd-open-edit-wizard event
 - Add edit mode to fd-setup-wizard — opens at step 3 with existing accounts loaded from setup/status; calls POST setup/update_accounts on save; dispatches fd-accounts-updated on success
