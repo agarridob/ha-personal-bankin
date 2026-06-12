@@ -188,11 +188,15 @@ a:focus:not(:focus-visible),
  */
 const _i18nCache = {};
 
+const _FD_VERSION = (() => {
+  try { return new URL(import.meta.url).searchParams.get("v") || "0"; } catch (_) { return "0"; }
+})();
+
 async function _loadLocale(lang) {
   if (_i18nCache[lang]) return _i18nCache[lang];
   const STATIC_BASE = "/api/finance_dashboard/static";
   try {
-    const resp = await fetch(`${STATIC_BASE}/locales/${lang}.json`);
+    const resp = await fetch(`${STATIC_BASE}/locales/${lang}.json?v=${_FD_VERSION}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     _i18nCache[lang] = await resp.json();
   } catch (_) {
