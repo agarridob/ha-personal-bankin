@@ -191,6 +191,12 @@ class FinanceDashboardPanel extends HTMLElement {
       }
     });
 
+    this.shadowRoot.addEventListener("fd-month-changed", (e) => {
+      const dp = this.shadowRoot.querySelector("fd-data-provider");
+      const { month, year } = e.detail;
+      if (dp) dp.setMonth(month, year);
+    });
+
     this.shadowRoot.addEventListener("fd-open-wizard", () => {
       this._openSetupWizard();
     });
@@ -296,6 +302,9 @@ class FinanceDashboardPanel extends HTMLElement {
       header.rateLimitedUntil = data.rateLimitedUntil;
       header.lastRefreshStats = data.lastRefreshStats;
       if (data.demoMode !== undefined) header.demoMode = data.demoMode;
+      // Sync month display when data comes from entity state (current month)
+      if (data.summary?.month) header.selectedMonth = data.summary.month;
+      if (data.summary?.year) header.selectedYear = data.summary.year;
     }
 
     // Loading state (e.g. during demo toggle)
