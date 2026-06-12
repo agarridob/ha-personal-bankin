@@ -1,5 +1,14 @@
 # Build Log
 
+## 0.17.0 — 2026-06-12
+Version: 0.17.0
+Branch: feat/transaction-history-accumulation
+Changes:
+- feat(history): accumulate transaction history — each refresh merges new transactions into storage instead of overwriting; historical booked txns outside the 90-day fetch window are preserved up to 24 months (HISTORY_RETENTION_MONTHS)
+- feat(history): /api/finance_dashboard/summary now accepts ?month=M&year=Y query params to serve any historical period from the accumulated cache without a live bank API call
+- feat(frontend): add ‹ › month navigation arrows to fd-header; next-month button disabled when at current month; dispatches fd-month-changed event
+- feat(frontend): fd-data-provider.setMonth() fetches historical summaries from API and dispatches fd-data-updated so all dashboard components reflect the selected period
+
 ## 0.16.1 — 2026-06-12
 Version: 0.16.1
 Branch: fix/categorize-i18n
