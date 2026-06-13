@@ -133,6 +133,14 @@ set_budget_limit:
           step: 0.01
           mode: box
 
+fetch_full_history:
+  name: Fetch Full History
+  description: >-
+    Admin-only. Resets the backfill flag and fetches 12 months (365 days) of
+    transaction history for all linked accounts. Use this after adding a new
+    bank account or to rebuild historical data from scratch.
+    Counts as one Enable Banking API call per account (4/day limit).
+
 toggle_demo:
   name: Toggle Demo Mode
   description: Toggle demo mode on/off. Generates realistic synthetic banking data for testing and demonstration.

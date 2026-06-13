@@ -104,6 +104,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._refresh_in_flight: bool = False
         # OAuth state tokens: {state_str: created_iso} — one-time-use, 10min TTL
         self._oauth_states: dict[str, str] = {}
+        # Backfill flag — False until the first 365-day fetch succeeds.
+        # Persisted in the transaction store so it survives HA restarts.
+        self._initial_sync_complete: bool = False
 
     # ------------------------------------------------------------------
     # Properties
@@ -300,6 +303,7 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             stats = cached.get("last_refresh_stats")
             if isinstance(stats, dict):
                 self._last_refresh_stats = stats
+            self._initial_sync_complete = bool(cached.get("initial_sync_complete", False))
             _LOGGER.info(
                 "Loaded %d cached transactions (last refresh: %s, balances: %d)",
                 len(self._transactions),

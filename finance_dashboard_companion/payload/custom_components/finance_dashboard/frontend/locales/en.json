@@ -36,7 +36,7 @@
   "wizard.step.3.person_label": "Person",
   "wizard.step.3.person_placeholder": "Person's name",
   "wizard.step.4.title": "Connection successful",
-  "wizard.step.4.body": "$count account(s) connected. Data is loading now.",
+  "wizard.step.4.body": "$count account(s) connected. Fetching 12 months of transaction history…",
   "wizard.step.4.edit_title": "Changes saved",
   "wizard.step.4.edit_body": "$count account(s) updated.",
   "wizard.step.4.done": "Done",
