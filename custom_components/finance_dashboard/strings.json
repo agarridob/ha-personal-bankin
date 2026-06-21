@@ -26,7 +26,8 @@
       "init": {
         "title": "Finance Settings",
         "data": {
-          "refresh_interval_minutes": "Refresh interval (minutes)",
+          "auto_refresh_enabled": "Automatic daily refresh",
+          "auto_refresh_hour": "Daily refresh hour (0–23)",
           "split_model": "Budget split model",
           "currency": "Currency",
           "enable_total_balance_sensor": "Enable total balance sensor",

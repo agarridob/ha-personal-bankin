@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.21.1"
+VERSION = "0.22.0"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -32,6 +32,14 @@ INITIAL_SYNC_DAYS = 365  # Days to fetch on the very first successful refresh
 DEFAULT_REFRESH_DAYS = 90  # Days for all subsequent refreshes
 SESSION_TIMEOUT_MINUTES = 30
 ENABLEBANKING_RATE_LIMIT_DAILY = 4
+
+# Automatic daily refresh (opt-in scheduler).
+# A single user-triggered live fetch per day at a fixed hour — NOT background
+# polling. Disabled by default; the 4/day per-ASPSP rate limit still applies,
+# so one scheduled refresh leaves headroom for manual refreshes.
+CONF_AUTO_REFRESH_ENABLED = "auto_refresh_enabled"
+CONF_AUTO_REFRESH_HOUR = "auto_refresh_hour"
+DEFAULT_AUTO_REFRESH_HOUR = 6
 
 # Transaction categorization
 CATEGORY_HOUSING = "housing"

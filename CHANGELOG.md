@@ -2,6 +2,18 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.22.0] — 2026-06-21
+
+### Added
+- Add opt-in once-a-day scheduled refresh — new options "auto_refresh_enabled" and "auto_refresh_hour" (0–23) arm a single live refresh per day at a user-chosen hour via async_track_time_change; disabled by default
+- The scheduled callback reuses the manual-refresh path (async_refresh_transactions + coordinator.async_refresh) and skips when demo mode is active or the daily rate limit is exhausted, so Enable Banking's 4/day per-ASPSP quota is never exceeded by the scheduler
+- Reload the config entry on options change so the scheduler is re-armed with the new hour/enabled flag; the time-change unsub is registered via entry.async_on_unload for automatic cleanup
+- Add auto_refresh_enabled / auto_refresh_hour labels and drop refresh_interval_minutes from strings.json, translations/en.json, translations/es.json
+- Test(core): add tests/test_auto_refresh.py covering enabled/disabled arming, configured hour, and rate-limit / demo-mode skip gates
+
+### Changed
+- Remove the unused "refresh_interval_minutes" option (vestigial from the golden sample; it implied non-existent interval polling)
+
 ## [0.20.0] — 2026-06-13
 
 ### Added

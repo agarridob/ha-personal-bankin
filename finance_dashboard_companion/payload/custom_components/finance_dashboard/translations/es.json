@@ -26,7 +26,8 @@
       "init": {
         "title": "Ajustes de Personal Bankin",
         "data": {
-          "refresh_interval_minutes": "Intervalo de actualización (minutos)",
+          "auto_refresh_enabled": "Actualización automática diaria",
+          "auto_refresh_hour": "Hora del refresco diario (0–23)",
           "split_model": "Modelo de reparto del presupuesto",
           "currency": "Moneda",
           "enable_total_balance_sensor": "Activar sensor de saldo total",
