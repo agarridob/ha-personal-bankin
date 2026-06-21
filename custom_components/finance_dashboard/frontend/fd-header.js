@@ -70,8 +70,6 @@ class FdHeader extends HTMLElement {
 
   set accountCount(v) {
     this._accountCount = v || 0;
-    const btn = this.shadowRoot.getElementById("editAccountsBtn");
-    if (btn) btn.style.display = this._accountCount > 0 ? "" : "none";
   }
 
   _updateRefreshBtn() {
@@ -385,8 +383,7 @@ h1 {
       <button class="btn-nav" id="nextMonthBtn" aria-label="${tSync("header.next_month")}" disabled>&#8250;</button>
     </div>
     <button class="btn btn-p" id="refreshBtn">${tSync("header.refresh.button")}</button>
-    <button class="btn" id="addAccountBtn" title="${tSync("header.add_account_title")}">${tSync("header.add_account")}</button>
-    <button class="btn" id="editAccountsBtn" title="${tSync("header.edit_accounts_title")}" style="display:none">${tSync("header.edit_accounts")}</button>
+    <button class="btn" id="editAccountsBtn" title="${tSync("header.edit_accounts_title")}">${tSync("header.edit_accounts")}</button>
   </div>
 </div>`;
 
@@ -407,14 +404,6 @@ h1 {
     this.shadowRoot.getElementById("demoBtn")
       .addEventListener("click", () => {
         this.dispatchEvent(new CustomEvent("fd-demo-toggle", {
-          bubbles: true,
-          composed: true,
-        }));
-      });
-
-    this.shadowRoot.getElementById("addAccountBtn")
-      .addEventListener("click", () => {
-        this.dispatchEvent(new CustomEvent("fd-open-wizard", {
           bubbles: true,
           composed: true,
         }));

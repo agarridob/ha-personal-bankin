@@ -66,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEn
             "initial_sync_pending",
             is_fixable=True,
             is_persistent=False,
-            severity=ir.IssueSeverity.INFO,
+            severity=ir.IssueSeverity.WARNING,
             translation_key="initial_sync_pending",
         )
 
@@ -288,14 +288,17 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
     hass.services.async_register(DOMAIN, SERVICE_TOGGLE_DEMO, handle_toggle_demo)
 
     async def handle_fetch_full_history(call) -> dict:
-        """Admin-only: reset the backfill flag and re-fetch 365 days of history."""
+        """Admin-only: reset the backfill flag and re-fetch 365 days of history.
+
+        Calls without a user_id (e.g. from the Repairs fix flow) are trusted
+        internal calls and bypass the admin gate.
+        """
         from homeassistant.exceptions import HomeAssistantError
 
-        if not call.context or not call.context.user_id:
-            raise HomeAssistantError("admin_required")
-        user = await hass.auth.async_get_user(call.context.user_id)
-        if user is None or not user.is_admin:
-            raise HomeAssistantError("admin_required")
+        if call.context and call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise HomeAssistantError("admin_required")
 
         await manager._clear_initial_sync_complete()
         await manager.async_refresh_transactions()

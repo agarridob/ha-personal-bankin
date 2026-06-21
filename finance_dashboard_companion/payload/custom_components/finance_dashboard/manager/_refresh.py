@@ -135,7 +135,7 @@ class RefreshMixin:
         t0: float,
         psu_ip: str | None = None,
     ) -> list[dict[str, Any]]:
-        from ..enablebanking_client import RateLimitExceeded
+        from ..enablebanking_client import RateLimitExceeded, TransactionPeriodExceeded
         from ..recurring import detect_recurring
         from ..transfer_detector import (
             apply_overrides,
@@ -279,6 +279,52 @@ class RefreshMixin:
                     "daily quota (4/day) exhausted"
                 )
                 break
+            except TransactionPeriodExceeded:
+                # Bank rejected the lookback window (422 WRONG_TRANSACTIONS_PERIOD).
+                # Retry this account with the standard 90-day window so we still
+                # get recent transactions even if the full backfill isn't possible.
+                fallback_from = (
+                    dt_util.now() - timedelta(days=DEFAULT_REFRESH_DAYS)
+                ).strftime("%Y-%m-%d")
+                _LOGGER.warning(
+                    "Account %s: bank rejected %d-day window — retrying with %d days",
+                    account_id,
+                    days,
+                    DEFAULT_REFRESH_DAYS,
+                )
+                try:
+                    txns = await client.async_get_transactions(
+                        account_id, fallback_from, date_to, psu_ip=psu_ip
+                    )
+                    accounts_hit += 1
+                    booked = txns.get("booked", [])
+                    pending = txns.get("pending", [])
+                    display_name = account.get("custom_name") or account.get("name", "")
+                    categorizer = self._categorizer
+                    for txn in booked:
+                        txn["_account_id"] = account_id
+                        txn["_account_name"] = display_name
+                        txn["_account_type"] = account.get("type", "personal")
+                        txn["_account_person"] = account.get("person", "")
+                        txn["_account_ha_users"] = account.get("ha_users", [])
+                        txn["_status"] = "booked"
+                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+                    for txn in pending:
+                        txn["_account_id"] = account_id
+                        txn["_account_name"] = display_name
+                        txn["_status"] = "pending"
+                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+                    existing = self._tx_by_account.get(account_id, [])
+                    historical_booked = [
+                        t for t in existing
+                        if t.get("_status") == "booked"
+                        and t.get("bookingDate", "") < fallback_from
+                        and t.get("bookingDate", "") >= retention_cutoff
+                    ]
+                    self._tx_by_account[account_id] = historical_booked + booked + pending
+                except Exception as exc:
+                    _LOGGER.exception("Fallback fetch also failed for account %s", account_id)
+                    errors.append(f"{account.get('name', account_id)}: {str(exc)[:120]}")
             except Exception as exc:
                 _LOGGER.exception(
                     "Failed to fetch transactions for account %s",

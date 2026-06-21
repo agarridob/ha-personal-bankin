@@ -58,6 +58,14 @@ def _sanitize_log(text: str) -> str:
     return text
 
 
+class TransactionPeriodExceeded(Exception):
+    """Raised when the bank rejects the requested date range (HTTP 422 WRONG_TRANSACTIONS_PERIOD).
+
+    The ASPSP limits how far back transactions can be fetched. Callers should
+    retry with a shorter window (e.g. DEFAULT_REFRESH_DAYS).
+    """
+
+
 class RateLimitExceeded(Exception):
     """Raised when the banking API returns HTTP 429 (daily quota exhausted).
 
@@ -572,6 +580,10 @@ class EnableBankingClient:
                 # stop retrying and serve cached data until tomorrow.
                 # Honor the Retry-After header when present so the
                 # reset time can be earlier than midnight.
+                if resp.status == 422 and "WRONG_TRANSACTIONS_PERIOD" in body:
+                    raise TransactionPeriodExceeded(
+                        f"Bank rejected date range (HTTP 422): {_sanitize_log(body[:200])}"
+                    )
                 if resp.status == 429:
                     retry_after_seconds: int | None = None
                     raw_retry = resp.headers.get("Retry-After")

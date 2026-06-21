@@ -175,6 +175,7 @@ class FdSetupWizard extends HTMLElement {
         ha_users: acc.ha_users || [],
         logo: acc.logo || "",
         iban: acc.iban_masked || "****",
+        oldest_transaction: acc.oldest_transaction || null,
       }));
     } catch (e) {
       this._error = (e && (e.error || e.message)) || String(e);
@@ -611,6 +612,12 @@ class FdSetupWizard extends HTMLElement {
   font-size: 12px;
   color: var(--secondary-text-color, #9898a8);
 }
+.account-card .acc-header .acc-oldest {
+  font-size: 11px;
+  color: var(--secondary-text-color, #9898a8);
+  margin-top: 2px;
+  opacity: 0.8;
+}
 .form-row {
   display: flex;
   gap: 10px;
@@ -855,6 +862,13 @@ class FdSetupWizard extends HTMLElement {
       const iban = acc.iban || "";
       const ibanMasked = this._editMode ? iban : (iban.length >= 4 ? `****${iban.slice(-4)}` : "****");
 
+      const oldestLabel = this._editMode && acc.oldest_transaction
+        ? (() => {
+            const [y, m, d] = acc.oldest_transaction.split("-");
+            return `<div class="acc-oldest">${tSync("wizard.step.3.oldest_tx", { date: `${d}-${m}-${y.slice(2)}` })}</div>`;
+          })()
+        : "";
+
       return `
         <div class="account-card" data-idx="${idx}">
           <div class="acc-header">
@@ -862,6 +876,7 @@ class FdSetupWizard extends HTMLElement {
             <div>
               <div class="acc-name">${this._esc(acc.name || tSync("general.accounts_singular"))}</div>
               <div class="acc-iban">${ibanMasked}</div>
+              ${oldestLabel}
             </div>
           </div>
           <div class="form-row">
@@ -896,6 +911,9 @@ class FdSetupWizard extends HTMLElement {
     const backBtnHtml = this._editMode
       ? ""
       : `<button class="btn-secondary" id="backBtn">${tSync("wizard.step.3.back")}</button>`;
+    const addBankBtnHtml = this._editMode
+      ? `<button class="btn-secondary" id="addBankBtn">${tSync("wizard.step.3.add_bank")}</button>`
+      : "";
 
     return `
       <p style="margin:0 0 16px;color:var(--secondary-text-color);font-size:13px;">
@@ -904,6 +922,7 @@ class FdSetupWizard extends HTMLElement {
       ${accountCards}
       <div class="actions">
         ${backBtnHtml}
+        ${addBankBtnHtml}
         <button class="btn-primary" id="completeBtn">${actionBtn}</button>
       </div>
     `;
@@ -934,6 +953,17 @@ class FdSetupWizard extends HTMLElement {
         this._step = 1;
         this._error = null;
         this._renderContent();
+      });
+    }
+
+    const addBankBtn = this.shadowRoot.getElementById("addBankBtn");
+    if (addBankBtn) {
+      addBankBtn.addEventListener("click", () => {
+        this._editMode = false;
+        this._step = 1;
+        this._error = null;
+        this._renderContent();
+        this._loadInstitutions();
       });
     }
 

@@ -48,12 +48,15 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
 
         # Sanitize account details for frontend (no raw IBANs)
         raw_accounts = entry.data.get("accounts", [])
+        manager = _get_manager(hass)
+        oldest_dates = manager.get_oldest_transaction_dates() if manager else {}
         safe_accounts = []
         for acc in raw_accounts:
             iban = acc.get("iban", "")
+            acc_id = acc.get("id", "")
             safe_accounts.append(
                 {
-                    "id": acc.get("id", ""),
+                    "id": acc_id,
                     "name": acc.get("name", ""),
                     "custom_name": acc.get("custom_name", ""),
                     "iban_masked": (f"****{iban[-4:]}" if len(iban) >= 4 else "****"),
@@ -63,6 +66,7 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
                     "type": acc.get("type", "personal"),
                     "ha_users": acc.get("ha_users", []),
                     "person": acc.get("person", ""),
+                    "oldest_transaction": oldest_dates.get(acc_id),
                 }
             )
 

@@ -618,6 +618,20 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             categories=categories,
         )
 
+    def get_oldest_transaction_dates(self) -> dict[str, str | None]:
+        """Return the oldest booked transaction date per account_id (YYYY-MM-DD), or None."""
+        result: dict[str, str | None] = {}
+        for acc_id, txns in self._tx_by_account.items():
+            if acc_id == "__unknown__":
+                continue
+            dates = [
+                t["bookingDate"]
+                for t in txns
+                if t.get("_status") == "booked" and t.get("bookingDate")
+            ]
+            result[acc_id] = min(dates) if dates else None
+        return result
+
     def get_cached_transactions(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get cached transactions (no API call).
 
