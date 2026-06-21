@@ -14,6 +14,14 @@ All notable changes to the Finance will be documented in this file.
 ### Changed
 - Remove the unused "refresh_interval_minutes" option (vestigial from the golden sample; it implied non-existent interval polling)
 
+## [0.21.1] — 2026-06-21
+
+### Added
+- Fall back to the 90-day window (DEFAULT_REFRESH_DAYS) when a bank rejects the 365-day backfill with HTTP 422 WRONG_TRANSACTIONS_PERIOD, so recent transactions are still fetched instead of losing the whole account
+- Add TransactionPeriodExceeded exception (distinct from the 429 rate-limit path) raised on 422 WRONG_TRANSACTIONS_PERIOD
+- Add get_oldest_transaction_dates() helper returning the oldest booked date per account
+- Surface the period fallback in the setup wizard messaging
+
 ## [0.20.0] — 2026-06-13
 
 ### Added
