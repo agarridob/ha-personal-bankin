@@ -11,6 +11,15 @@ Changes:
 - feat(i18n): add auto_refresh_enabled / auto_refresh_hour labels and drop refresh_interval_minutes from strings.json, translations/en.json, translations/es.json
 - test(core): add tests/test_auto_refresh.py covering enabled/disabled arming, configured hour, and rate-limit / demo-mode skip gates
 
+## 0.21.1 — 2026-06-21
+Version: 0.21.1
+Branch: feat/initial-12month-backfill
+Changes:
+- feat(manager): fall back to the 90-day window (DEFAULT_REFRESH_DAYS) when a bank rejects the 365-day backfill with HTTP 422 WRONG_TRANSACTIONS_PERIOD, so recent transactions are still fetched instead of losing the whole account
+- feat(client): add TransactionPeriodExceeded exception (distinct from the 429 rate-limit path) raised on 422 WRONG_TRANSACTIONS_PERIOD
+- feat(manager): add get_oldest_transaction_dates() helper returning the oldest booked date per account
+- feat(frontend): surface the period fallback in the setup wizard messaging
+
 ## 0.20.0 — 2026-06-13
 Version: 0.20.0
 Branch: feat/initial-12month-backfill

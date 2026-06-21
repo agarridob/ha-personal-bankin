@@ -21,6 +21,7 @@
 
 
 
+
 ## 0.22.0
 - Add opt-in once-a-day scheduled refresh — new options "auto_refresh_enabled" and "auto_refresh_hour" (0–23) arm a single live refresh per day at a user-chosen hour via async_track_time_change; disabled by default
 - The scheduled callback reuses the manual-refresh path (async_refresh_transactions + coordinator.async_refresh) and skips when demo mode is active or the daily rate limit is exhausted, so Enable Banking's 4/day per-ASPSP quota is never exceeded by the scheduler
@@ -28,6 +29,12 @@
 - Remove the unused "refresh_interval_minutes" option (vestigial from the golden sample; it implied non-existent interval polling)
 - Add auto_refresh_enabled / auto_refresh_hour labels and drop refresh_interval_minutes from strings.json, translations/en.json, translations/es.json
 - Test(core): add tests/test_auto_refresh.py covering enabled/disabled arming, configured hour, and rate-limit / demo-mode skip gates
+
+## 0.21.1
+- Fall back to the 90-day window (DEFAULT_REFRESH_DAYS) when a bank rejects the 365-day backfill with HTTP 422 WRONG_TRANSACTIONS_PERIOD, so recent transactions are still fetched instead of losing the whole account
+- Add TransactionPeriodExceeded exception (distinct from the 429 rate-limit path) raised on 422 WRONG_TRANSACTIONS_PERIOD
+- Add get_oldest_transaction_dates() helper returning the oldest booked date per account
+- Surface the period fallback in the setup wizard messaging
 
 ## 0.20.0
 - Auto-select 365-day window on first refresh (INITIAL_SYNC_DAYS); subsequent refreshes use DEFAULT_REFRESH_DAYS (90). Flag initial_sync_complete persisted in transaction store so the backfill survives HA restarts and is idempotent
