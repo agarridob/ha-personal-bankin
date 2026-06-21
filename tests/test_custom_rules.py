@@ -45,10 +45,11 @@ def _txn(creditor: str, amount: str = "-10.00") -> dict:
 
 
 def test_custom_rules_extend_defaults():
+    # A user-defined category key ("food") still works as a custom alias.
     cat = TransactionCategorizer(custom_rules={"food": ["la tahona"]})
     assert cat.categorize(_txn("Panaderia La Tahona")) == "food"
-    # Built-in rules still apply
-    assert cat.categorize(_txn("MERCADONA SA")) == "food"
+    # Built-in rules still apply — supermarkets resolve to the groceries category.
+    assert cat.categorize(_txn("MERCADONA SA")) == "groceries"
 
 
 def test_custom_rules_new_category():
@@ -132,8 +133,8 @@ async def test_remove_does_not_affect_builtin_rules():
     mgr = _make_manager()
     mgr._transactions = [_txn("MERCADONA SA")]
 
-    await mgr.async_remove_categorization_rule("food", "mercadona")
+    await mgr.async_remove_categorization_rule("groceries", "mercadona")
 
     # Built-in keyword still matches — removal only targets custom rules
     mgr._categorizer = TransactionCategorizer(custom_rules=mgr.get_custom_rules() or None)
-    assert mgr._categorizer.categorize(mgr._transactions[0]) == "food"
+    assert mgr._categorizer.categorize(mgr._transactions[0]) == "groceries"

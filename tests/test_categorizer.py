@@ -66,32 +66,32 @@ def test_housing(field, value):
 
 
 # ---------------------------------------------------------------------------
-# Food
+# Food — split into groceries (supermarkets) and dining (restaurants/delivery)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "field,value",
+    "field,value,expected",
     [
-        ("creditor", "MERCADONA SA"),
-        ("creditor", "Carrefour Express"),
-        ("creditor", "ALDI San Roque"),
-        ("creditor", "Lidl Supermercados SAU"),
-        ("creditor", "EROSKI City"),
-        ("creditor", "Glovoapp23 SL"),
-        ("remittance", "Compra supermercado semanal"),
-        ("remittance", "Restaurante Casa Pepe mesa 4"),
-        ("remittance", "Uber Eats Madrid"),
-        ("creditor", "ALCAMPO SA"),
+        ("creditor", "MERCADONA SA", "groceries"),
+        ("creditor", "Carrefour Express", "groceries"),
+        ("creditor", "ALDI San Roque", "groceries"),
+        ("creditor", "Lidl Supermercados SAU", "groceries"),
+        ("creditor", "EROSKI City", "groceries"),
+        ("remittance", "Compra supermercado semanal", "groceries"),
+        ("creditor", "ALCAMPO SA", "groceries"),
+        ("creditor", "Glovoapp23 SL", "dining"),
+        ("remittance", "Restaurante Casa Pepe mesa 4", "dining"),
+        ("remittance", "Uber Eats Madrid", "dining"),
     ],
 )
-def test_food(field, value):
+def test_food(field, value, expected):
     cat = TransactionCategorizer()
     if field == "creditor":
         result = cat.categorize(_txn(creditor=value))
     else:
         result = cat.categorize(_txn(remittance=value))
-    assert result == "food", f"Expected food for '{value}', got '{result}'"
+    assert result == expected, f"Expected {expected} for '{value}', got '{result}'"
 
 
 # ---------------------------------------------------------------------------
@@ -355,9 +355,9 @@ def test_get_rules_returns_copy():
     """get_rules() must return a copy — mutations must not affect the instance."""
     cat = TransactionCategorizer()
     rules = cat.get_rules()
-    rules["food"].append("__sentinel__")
+    rules["groceries"].append("__sentinel__")
     # Internal rules must not be polluted
-    assert "__sentinel__" not in cat.get_rules()["food"]
+    assert "__sentinel__" not in cat.get_rules()["groceries"]
 
 
 # ---------------------------------------------------------------------------
@@ -378,7 +378,7 @@ def test_case_insensitive_matching(text):
     """Rule matching must be case-insensitive."""
     cat = TransactionCategorizer()
     result = cat.categorize(_txn(creditor=text))
-    assert result == "food", f"Expected food for '{text}', got '{result}'"
+    assert result == "groceries", f"Expected groceries for '{text}', got '{result}'"
 
 
 # ---------------------------------------------------------------------------
