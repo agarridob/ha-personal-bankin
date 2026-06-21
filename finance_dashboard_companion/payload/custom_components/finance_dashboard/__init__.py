@@ -22,6 +22,7 @@ from homeassistant.core import HomeAssistant, SupportsResponse
 
 from .const import (
     DOMAIN,
+    SERVICE_FETCH_FULL_HISTORY,
     SERVICE_TOGGLE_DEMO,
 )
 
@@ -53,6 +54,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEn
 
     manager = FinanceDashboardManager(hass, entry)
     await manager.async_initialize()
+
+    # Notify the user (via HA Repairs) that a 12-month backfill is pending.
+    # The issue is cleared automatically once the first 365-day refresh succeeds.
+    if not manager.initial_sync_complete:
+        from homeassistant.helpers import issue_registry as ir
+
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            "initial_sync_pending",
+            is_fixable=True,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="initial_sync_pending",
+        )
 
     # Create the coordinator — single source of truth for all entities.
     # Entities read from coordinator.data instead of calling the API directly.
@@ -270,3 +286,28 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET_LIMIT, handle_set_budget_limit)
     hass.services.async_register(DOMAIN, SERVICE_EXPORT_CSV, handle_export_csv)
     hass.services.async_register(DOMAIN, SERVICE_TOGGLE_DEMO, handle_toggle_demo)
+
+    async def handle_fetch_full_history(call) -> dict:
+        """Admin-only: reset the backfill flag and re-fetch 365 days of history.
+
+        Calls without a user_id (e.g. from the Repairs fix flow) are trusted
+        internal calls and bypass the admin gate.
+        """
+        from homeassistant.exceptions import HomeAssistantError
+
+        if call.context and call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise HomeAssistantError("admin_required")
+
+        await manager._clear_initial_sync_complete()
+        await manager.async_refresh_transactions()
+        await coordinator.async_refresh()
+        return manager.get_refresh_status()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_FETCH_FULL_HISTORY,
+        handle_fetch_full_history,
+        supports_response=SupportsResponse.OPTIONAL,
+    )

@@ -19,6 +19,14 @@
 
 
 
+
+## 0.20.0
+- Auto-select 365-day window on first refresh (INITIAL_SYNC_DAYS); subsequent refreshes use DEFAULT_REFRESH_DAYS (90). Flag initial_sync_complete persisted in transaction store so the backfill survives HA restarts and is idempotent
+- Add fetch_full_history service (admin-only) to reset the flag and re-fetch 365 days on demand — useful after adding a second bank account
+- Add initial_sync_pending HA Repair issue shown on startup when backfill not yet done; fix flow triggers fetch_full_history service; issue auto-dismissed after first successful 365-day refresh
+- Add initial_sync_pending issue strings to strings.json, translations/en.json, translations/es.json
+- Update wizard step 4 body to inform user that 12 months of history are being fetched
+
 ## 0.19.1
 - Hide demo button in fd-header when demo mode is inactive; button only shows when demo is running so users can stop it
 - Rename "Actualizar" to "Refrescar" in Spanish header button and empty-state hint

@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.util import dt as dt_util
 
-from ..const import HISTORY_RETENTION_MONTHS
+from ..const import DEFAULT_REFRESH_DAYS, HISTORY_RETENTION_MONTHS, INITIAL_SYNC_DAYS
 
 if TYPE_CHECKING:
     pass
@@ -89,7 +89,7 @@ class RefreshMixin:
     # ------------------------------------------------------------------
 
     async def async_refresh_transactions(
-        self, days: int = 90, psu_ip: str | None = None
+        self, days: int | None = None, psu_ip: str | None = None
     ) -> list[dict[str, Any]]:
         """Refresh transactions AND balances for all linked accounts.
 
@@ -97,6 +97,11 @@ class RefreshMixin:
         and persists to encrypted .storage/ cache. Also refreshes
         balances in the same user-triggered round — a single click
         updates the entire cache.
+
+        On the very first successful refresh (``initial_sync_complete`` flag
+        not set) the window is automatically expanded to 365 days so the user
+        gets full historical context from the start. Subsequent refreshes use
+        the default 90-day window. Pass an explicit ``days`` value to override.
 
         If the API returns HTTP 429 (daily quota exhausted), cached
         data is served and no further API calls are attempted until
@@ -106,11 +111,14 @@ class RefreshMixin:
         are written to ``_last_refresh_stats`` regardless of outcome.
 
         Args:
-            days: Number of days to fetch (default 90).
+            days: Number of days to fetch. When None the window is chosen
+                automatically: 365 for the initial backfill, 90 thereafter.
             psu_ip: Optional PSU IP address from the originating HTTP request.
                 Forwarded to the Enable Banking API as ``Psu-Ip-Address``.
                 Never required — omit when not available.
         """
+        if days is None:
+            days = DEFAULT_REFRESH_DAYS if self.initial_sync_complete else INITIAL_SYNC_DAYS
         async with self._refresh_lock:
             self._refresh_in_flight = True
             started = dt_util.now()
@@ -127,7 +135,7 @@ class RefreshMixin:
         t0: float,
         psu_ip: str | None = None,
     ) -> list[dict[str, Any]]:
-        from ..enablebanking_client import RateLimitExceeded
+        from ..enablebanking_client import RateLimitExceeded, TransactionPeriodExceeded
         from ..recurring import detect_recurring
         from ..transfer_detector import (
             apply_overrides,
@@ -185,6 +193,11 @@ class RefreshMixin:
             )
             return []
 
+        _LOGGER.info(
+            "Fetching %d days of transactions (%s)",
+            days,
+            "initial backfill" if not self.initial_sync_complete else "regular refresh",
+        )
         date_from = (dt_util.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         date_to = dt_util.now().strftime("%Y-%m-%d")
 
@@ -266,6 +279,52 @@ class RefreshMixin:
                     "daily quota (4/day) exhausted"
                 )
                 break
+            except TransactionPeriodExceeded:
+                # Bank rejected the lookback window (422 WRONG_TRANSACTIONS_PERIOD).
+                # Retry this account with the standard 90-day window so we still
+                # get recent transactions even if the full backfill isn't possible.
+                fallback_from = (
+                    dt_util.now() - timedelta(days=DEFAULT_REFRESH_DAYS)
+                ).strftime("%Y-%m-%d")
+                _LOGGER.warning(
+                    "Account %s: bank rejected %d-day window — retrying with %d days",
+                    account_id,
+                    days,
+                    DEFAULT_REFRESH_DAYS,
+                )
+                try:
+                    txns = await client.async_get_transactions(
+                        account_id, fallback_from, date_to, psu_ip=psu_ip
+                    )
+                    accounts_hit += 1
+                    booked = txns.get("booked", [])
+                    pending = txns.get("pending", [])
+                    display_name = account.get("custom_name") or account.get("name", "")
+                    categorizer = self._categorizer
+                    for txn in booked:
+                        txn["_account_id"] = account_id
+                        txn["_account_name"] = display_name
+                        txn["_account_type"] = account.get("type", "personal")
+                        txn["_account_person"] = account.get("person", "")
+                        txn["_account_ha_users"] = account.get("ha_users", [])
+                        txn["_status"] = "booked"
+                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+                    for txn in pending:
+                        txn["_account_id"] = account_id
+                        txn["_account_name"] = display_name
+                        txn["_status"] = "pending"
+                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+                    existing = self._tx_by_account.get(account_id, [])
+                    historical_booked = [
+                        t for t in existing
+                        if t.get("_status") == "booked"
+                        and t.get("bookingDate", "") < fallback_from
+                        and t.get("bookingDate", "") >= retention_cutoff
+                    ]
+                    self._tx_by_account[account_id] = historical_booked + booked + pending
+                except Exception as exc:
+                    _LOGGER.exception("Fallback fetch also failed for account %s", account_id)
+                    errors.append(f"{account.get('name', account_id)}: {str(exc)[:120]}")
             except Exception as exc:
                 _LOGGER.exception(
                     "Failed to fetch transactions for account %s",
@@ -337,8 +396,23 @@ class RefreshMixin:
             _LOGGER.exception("Recurring detection failed — skipping")
             self._recurring_patterns = []
 
+        # Mark initial sync complete on first successful live fetch (>0 accounts hit).
+        # Setting the flag before _persist_transactions means it is atomically saved
+        # alongside the transactions in a single store write.
+        _completing_initial_sync = not self.initial_sync_complete and accounts_hit > 0
+        if _completing_initial_sync:
+            self._initial_sync_complete = True
+            _LOGGER.info(
+                "Initial 12-month backfill complete — future refreshes will use %d days",
+                DEFAULT_REFRESH_DAYS,
+            )
+
         # Persist to encrypted .storage/
         await self._persist_transactions()
+
+        # Dismiss the Repairs issue now that we have historical data.
+        if _completing_initial_sync:
+            await self._dismiss_initial_sync_issue()
 
         # Fire events for newly detected transactions — must not crash refresh
         try:

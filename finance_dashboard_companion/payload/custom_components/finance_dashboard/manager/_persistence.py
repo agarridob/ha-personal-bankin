@@ -21,6 +21,15 @@ _LOGGER = logging.getLogger(__name__)
 class PersistenceMixin:
     """Mixin that adds persistence methods to FinanceDashboardManager."""
 
+    @property
+    def initial_sync_complete(self) -> bool:
+        """True once the first 365-day backfill has succeeded.
+
+        Defaults to False for fresh installs and for existing installs that
+        pre-date this flag — their next manual refresh will auto-backfill.
+        """
+        return getattr(self, "_initial_sync_complete", False)
+
     async def _persist_transactions(self) -> None:
         """Save transactions, balances, rate-limit and stats to cache.
 
@@ -42,8 +51,25 @@ class PersistenceMixin:
                 ),
                 "last_refresh_stats": self._last_refresh_stats,
                 "account_count": len(self._accounts),
+                "initial_sync_complete": self.initial_sync_complete,
             }
         )
+
+    async def _dismiss_initial_sync_issue(self) -> None:
+        """Dismiss the initial_sync_pending repair issue after a successful backfill."""
+        try:
+            from homeassistant.helpers import issue_registry as ir
+
+            from ..const import DOMAIN
+
+            ir.async_delete_issue(self._hass, DOMAIN, "initial_sync_pending")
+        except Exception:
+            _LOGGER.debug("Could not dismiss initial_sync_pending issue", exc_info=True)
+
+    async def _clear_initial_sync_complete(self) -> None:
+        """Reset the backfill flag so the next refresh fetches 365 days again."""
+        self._initial_sync_complete = False
+        await self._persist_transactions()
 
     async def _async_load_transfer_overrides(
         self,

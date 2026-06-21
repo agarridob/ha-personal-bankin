@@ -57,6 +57,18 @@
     }
   },
   "issues": {
+    "initial_sync_pending": {
+      "title": "Personal Bankin: fetch 12-month history",
+      "description": "No full transaction history has been downloaded yet. Click **Fix** to fetch the last 12 months (365 days) from your bank now. This uses one of your 4 daily Enable Banking API calls.\n\nAlternatively, clicking **Refresh** in the Personal Bankin panel will also trigger the backfill automatically.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Fetch 12-month transaction history",
+            "description": "This will fetch 365 days of transactions from your linked bank accounts. The process runs in the background and may take a few seconds.\n\nClick **Submit** to start."
+          }
+        }
+      }
+    },
     "restart_required": {
       "title": "Finance Update — Restart Required",
       "description": "Finance has been updated to version {version}. A restart is required to apply the new version.",

@@ -104,6 +104,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._refresh_in_flight: bool = False
         # OAuth state tokens: {state_str: created_iso} — one-time-use, 10min TTL
         self._oauth_states: dict[str, str] = {}
+        # Backfill flag — False until the first 365-day fetch succeeds.
+        # Persisted in the transaction store so it survives HA restarts.
+        self._initial_sync_complete: bool = False
 
     # ------------------------------------------------------------------
     # Properties
@@ -300,6 +303,7 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             stats = cached.get("last_refresh_stats")
             if isinstance(stats, dict):
                 self._last_refresh_stats = stats
+            self._initial_sync_complete = bool(cached.get("initial_sync_complete", False))
             _LOGGER.info(
                 "Loaded %d cached transactions (last refresh: %s, balances: %d)",
                 len(self._transactions),
@@ -613,6 +617,20 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             date_to=date_to,
             categories=categories,
         )
+
+    def get_oldest_transaction_dates(self) -> dict[str, str | None]:
+        """Return the oldest booked transaction date per account_id (YYYY-MM-DD), or None."""
+        result: dict[str, str | None] = {}
+        for acc_id, txns in self._tx_by_account.items():
+            if acc_id == "__unknown__":
+                continue
+            dates = [
+                t["bookingDate"]
+                for t in txns
+                if t.get("_status") == "booked" and t.get("bookingDate")
+            ]
+            result[acc_id] = min(dates) if dates else None
+        return result
 
     def get_cached_transactions(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get cached transactions (no API call).

@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.19.1"
+VERSION = "0.21.1"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -28,6 +28,8 @@ ENABLEBANKING_SANDBOX_URL = "https://api.enablebanking.com"
 TOKEN_MAX_AGE_DAYS = 90  # Force re-auth after 90 days (our own policy)
 SESSION_MAX_DAYS = 180  # Enable Banking session validity
 HISTORY_RETENTION_MONTHS = 24  # How far back to keep accumulated transactions
+INITIAL_SYNC_DAYS = 365  # Days to fetch on the very first successful refresh
+DEFAULT_REFRESH_DAYS = 90  # Days for all subsequent refreshes
 SESSION_TIMEOUT_MINUTES = 30
 ENABLEBANKING_RATE_LIMIT_DAILY = 4
 
@@ -255,6 +257,7 @@ CATEGORIZATION_RULES = {
 STORAGE_KEY_CUSTOM_RULES = f"{DOMAIN}_custom_rules"
 
 # Services
+SERVICE_FETCH_FULL_HISTORY = "fetch_full_history"
 SERVICE_REFRESH_ACCOUNTS = "refresh_accounts"
 SERVICE_REFRESH_TRANSACTIONS = "refresh_transactions"
 SERVICE_CATEGORIZE = "categorize_transactions"

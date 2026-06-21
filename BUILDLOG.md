@@ -1,5 +1,15 @@
 # Build Log
 
+## 0.20.0 — 2026-06-13
+Version: 0.20.0
+Branch: feat/initial-12month-backfill
+Changes:
+- feat(manager): auto-select 365-day window on first refresh (INITIAL_SYNC_DAYS); subsequent refreshes use DEFAULT_REFRESH_DAYS (90). Flag initial_sync_complete persisted in transaction store so the backfill survives HA restarts and is idempotent
+- feat(manager): add fetch_full_history service (admin-only) to reset the flag and re-fetch 365 days on demand — useful after adding a second bank account
+- feat(repairs): add initial_sync_pending HA Repair issue shown on startup when backfill not yet done; fix flow triggers fetch_full_history service; issue auto-dismissed after first successful 365-day refresh
+- feat(i18n): add initial_sync_pending issue strings to strings.json, translations/en.json, translations/es.json
+- feat(frontend): update wizard step 4 body to inform user that 12 months of history are being fetched
+
 ## 0.19.1 — 2026-06-12
 Version: 0.19.1
 Branch: fix/header-demo-button-labels

@@ -57,6 +57,18 @@
     }
   },
   "issues": {
+    "initial_sync_pending": {
+      "title": "Personal Bankin: descargar historial de 12 meses",
+      "description": "Todavía no se ha descargado el historial completo de movimientos. Pulsa **Solucionar** para obtener los últimos 12 meses (365 días) de tu banco ahora. Esto consume una de tus 4 llamadas diarias al API de Enable Banking.\n\nAlternativamente, pulsar **Actualizar** en el panel de Personal Bankin también lanzará la descarga automáticamente.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Descargar historial de 12 meses",
+            "description": "Se obtendrán 365 días de movimientos de todas tus cuentas bancarias vinculadas. El proceso se ejecuta en segundo plano y puede tardar unos segundos.\n\nPulsa **Enviar** para empezar."
+          }
+        }
+      }
+    },
     "restart_required": {
       "title": "Actualización de Personal Bankin — reinicio necesario",
       "description": "Personal Bankin se ha actualizado a la versión {version}. Es necesario reiniciar para aplicar la nueva versión.",
