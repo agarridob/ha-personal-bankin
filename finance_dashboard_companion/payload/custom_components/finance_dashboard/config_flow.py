@@ -25,7 +25,13 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .const import DEFAULT_COUNTRY, DOMAIN
+from .const import (
+    CONF_AUTO_REFRESH_ENABLED,
+    CONF_AUTO_REFRESH_HOUR,
+    DEFAULT_AUTO_REFRESH_HOUR,
+    DEFAULT_COUNTRY,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -219,9 +225,15 @@ class FinanceDashboardOptionsFlow(OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        "refresh_interval_minutes",
-                        default=self.config_entry.options.get("refresh_interval_minutes", 60),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=15, max=1440)),
+                        CONF_AUTO_REFRESH_ENABLED,
+                        default=self.config_entry.options.get(CONF_AUTO_REFRESH_ENABLED, False),
+                    ): bool,
+                    vol.Optional(
+                        CONF_AUTO_REFRESH_HOUR,
+                        default=self.config_entry.options.get(
+                            CONF_AUTO_REFRESH_HOUR, DEFAULT_AUTO_REFRESH_HOUR
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=23)),
                     vol.Optional(
                         "split_model",
                         default=self.config_entry.options.get("split_model", "proportional"),

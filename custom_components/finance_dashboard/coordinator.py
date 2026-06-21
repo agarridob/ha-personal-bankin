@@ -40,9 +40,12 @@ class FinanceDashboardCoordinator(DataUpdateCoordinator):
 
         Live data enters the system exclusively through
         ``manager.async_refresh_transactions``, which is only invoked from
-        explicit user-triggered paths (refresh button, service call, or the
-        post-setup bootstrap).  Enable Banking enforces a 4/day per-ASPSP
-        rate limit, so automatic background fetches are strictly forbidden.
+        explicit user-triggered paths (refresh button, service call, the
+        post-setup bootstrap, or the opt-in once-a-day scheduled refresh in
+        ``__init__._async_setup_auto_refresh``).  That scheduler fires at most
+        one live fetch per day at a user-chosen hour — it is NOT interval
+        polling.  Enable Banking enforces a 4/day per-ASPSP rate limit, so
+        automatic background interval fetches remain strictly forbidden.
         """
         super().__init__(
             hass,

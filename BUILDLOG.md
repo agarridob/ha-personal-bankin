@@ -1,5 +1,16 @@
 # Build Log
 
+## 0.22.0 — 2026-06-21
+Version: 0.22.0
+Branch: feat/auto-refresh-schedule
+Changes:
+- feat(core): add opt-in once-a-day scheduled refresh — new options "auto_refresh_enabled" and "auto_refresh_hour" (0–23) arm a single live refresh per day at a user-chosen hour via async_track_time_change; disabled by default
+- feat(core): the scheduled callback reuses the manual-refresh path (async_refresh_transactions + coordinator.async_refresh) and skips when demo mode is active or the daily rate limit is exhausted, so Enable Banking's 4/day per-ASPSP quota is never exceeded by the scheduler
+- feat(core): reload the config entry on options change so the scheduler is re-armed with the new hour/enabled flag; the time-change unsub is registered via entry.async_on_unload for automatic cleanup
+- refactor(config_flow): remove the unused "refresh_interval_minutes" option (vestigial from the golden sample; it implied non-existent interval polling)
+- feat(i18n): add auto_refresh_enabled / auto_refresh_hour labels and drop refresh_interval_minutes from strings.json, translations/en.json, translations/es.json
+- test(core): add tests/test_auto_refresh.py covering enabled/disabled arming, configured hour, and rate-limit / demo-mode skip gates
+
 ## 0.20.0 — 2026-06-13
 Version: 0.20.0
 Branch: feat/initial-12month-backfill

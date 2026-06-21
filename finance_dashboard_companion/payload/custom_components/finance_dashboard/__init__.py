@@ -7,8 +7,10 @@ transactions, and household budgets.
 SECURITY: No financial data is ever stored in git or logs.
 All credentials and tokens are stored in HA's encrypted .storage/ directory.
 Live banking calls are gated behind explicit user-triggered paths
-(refresh button, service call, setup bootstrap) to respect Enable
-Banking's 4/day/ASPSP rate limit.
+(refresh button, service call, setup bootstrap, and an opt-in once-a-day
+scheduled refresh) to respect Enable Banking's 4/day/ASPSP rate limit.
+The optional daily scheduler fires at most one live fetch per day at a
+user-chosen hour — it is NOT background interval polling.
 """
 
 from __future__ import annotations
@@ -19,8 +21,12 @@ from ha_customapps.restart import RestartNotifier
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.helpers.event import async_track_time_change
 
 from .const import (
+    CONF_AUTO_REFRESH_ENABLED,
+    CONF_AUTO_REFRESH_HOUR,
+    DEFAULT_AUTO_REFRESH_HOUR,
     DOMAIN,
     SERVICE_FETCH_FULL_HISTORY,
     SERVICE_TOGGLE_DEMO,
@@ -128,8 +134,67 @@ async def async_setup_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEn
     else:
         hass.bus.async_listen_once("homeassistant_started", _on_started)
 
+    # Opt-in once-a-day scheduled refresh (see module docstring). Disabled by
+    # default; respects the 4/day rate limit and demo mode.
+    _async_setup_auto_refresh(hass, entry, manager, coordinator)
+
+    # Reload the entry when options change so the scheduler is re-armed with
+    # the new hour / enabled flag. The unsub registered via async_on_unload
+    # is cleaned up automatically on each reload.
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+
     _LOGGER.info("Finance Dashboard v%s loaded", entry.version)
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: FinanceDashboardConfigEntry) -> None:
+    """Reload the config entry when options change (re-arms the scheduler)."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_setup_auto_refresh(
+    hass: HomeAssistant,
+    entry: FinanceDashboardConfigEntry,
+    manager,
+    coordinator,
+) -> None:
+    """Arm a single daily live refresh at a user-chosen hour (opt-in).
+
+    This is the ONLY automatic live-fetch path. It fires at most once per day
+    and is gated by the same rate-limit / demo checks as a manual refresh, so
+    Enable Banking's 4/day per-ASPSP quota is never exceeded by the scheduler
+    alone. When disabled (default) nothing is registered and behaviour is
+    identical to before — refreshes happen only on explicit user action.
+    """
+    if not entry.options.get(CONF_AUTO_REFRESH_ENABLED, False):
+        return
+
+    hour = entry.options.get(CONF_AUTO_REFRESH_HOUR, DEFAULT_AUTO_REFRESH_HOUR)
+
+    async def _scheduled_refresh(now) -> None:
+        # Never touch the bank in demo mode — cached/sample data only.
+        if manager.demo_mode:
+            _LOGGER.debug("Scheduled refresh skipped: demo mode active")
+            return
+        # rate_limited_until returns None once the window has elapsed, so a
+        # truthy value means the daily quota is currently exhausted.
+        rate_limited = manager.rate_limited_until
+        if rate_limited:
+            _LOGGER.info(
+                "Scheduled refresh skipped: rate-limited until %s",
+                rate_limited.isoformat(),
+            )
+            return
+        try:
+            await manager.async_refresh_transactions()
+            await coordinator.async_refresh()
+            _LOGGER.info("Scheduled daily refresh completed")
+        except Exception:
+            _LOGGER.exception("Scheduled daily refresh failed")
+
+    unsub = async_track_time_change(hass, _scheduled_refresh, hour=hour, minute=0, second=0)
+    entry.async_on_unload(unsub)
+    _LOGGER.info("Auto-refresh scheduled daily at %02d:00", hour)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: FinanceDashboardConfigEntry) -> bool:
