@@ -23,6 +23,14 @@
 
 
 
+
+## 0.23.1
+- Persist transactions, balances and refresh stats in a single write at the END of the refresh round — previously _persist_transactions ran before the balance leg and stats build, so freshly-fetched balances/stats were saved one round late (or never, freezing the displayed balance). Root cause of accounts showing a stale balance despite daily auto-refresh
+- The 422 WRONG_TRANSACTIONS_PERIOD fallback now retries with progressively smaller windows (TX_FALLBACK_WINDOWS = [30, 7]) instead of re-requesting the identical 90-day window that was just rejected; an account is only marked failed once every window is rejected
+- Prune cache buckets (transactions + balances) for accounts that are no longer linked — residue from re-linking a bank under a new Enable Banking session that caused duplicate transactions on every load and stale balance entries
+- Extract _fetch_account_txns_with_fallback and _ingest_account_txns helpers, removing the duplicated tag/categorize/merge block between the primary fetch and the fallback path
+- Test(manager): add tests/test_refresh_fixes.py covering stale-account pruning, the descending-window 422 fallback, and ingest tagging + historical merge
+
 ## 0.23.0
 - Show balance per account — the total-balance KPI card is now clickable and expands an accordion listing each account (bank logo, custom name, masked IBAN ****1234, balance) below the stats row; collapsed by default, keyboard-accessible (role=button, Enter/Space, aria-expanded)
 - Expose the account bank logo to the panel by copying entity_picture into data.accounts[].logo in fd-data-provider (falls back to the bank/account initial when no logo is set)

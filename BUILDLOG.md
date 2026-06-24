@@ -1,5 +1,15 @@
 # Build Log
 
+## 0.23.1 — 2026-06-24
+Version: 0.23.1
+Branch: fix/refresh-persistence-and-stale-accounts
+Changes:
+- fix(manager): persist transactions, balances and refresh stats in a single write at the END of the refresh round — previously _persist_transactions ran before the balance leg and stats build, so freshly-fetched balances/stats were saved one round late (or never, freezing the displayed balance). Root cause of accounts showing a stale balance despite daily auto-refresh
+- fix(manager): the 422 WRONG_TRANSACTIONS_PERIOD fallback now retries with progressively smaller windows (TX_FALLBACK_WINDOWS = [30, 7]) instead of re-requesting the identical 90-day window that was just rejected; an account is only marked failed once every window is rejected
+- fix(manager): prune cache buckets (transactions + balances) for accounts that are no longer linked — residue from re-linking a bank under a new Enable Banking session that caused duplicate transactions on every load and stale balance entries
+- refactor(manager): extract _fetch_account_txns_with_fallback and _ingest_account_txns helpers, removing the duplicated tag/categorize/merge block between the primary fetch and the fallback path
+- test(manager): add tests/test_refresh_fixes.py covering stale-account pruning, the descending-window 422 fallback, and ingest tagging + historical merge
+
 ## 0.23.0 — 2026-06-24
 Version: 0.23.0
 Branch: feat/per-account-balance
