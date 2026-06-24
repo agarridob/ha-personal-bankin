@@ -24,6 +24,14 @@
 
 
 
+
+## 0.23.2
+- The /transactions endpoint served only the first 100 cached rows, so the panel's transaction log (and its date/category/search filters, which run client-side) could never reach older movements even though up to 24 months are cached. It now serves the full cached history by default (bounded by HISTORY_RETENTION_MONTHS), with an optional ?limit= override
+- Get_cached_transactions(limit=None) now returns the whole cache (a copy) instead of defaulting to 100
+- Cap the expanded transaction log at EXPANDED_MAX (500) rendered rows with a "showing first N of M — narrow with filters" hint, so loading the full 24-month history never janks the panel; filters still apply before the cap so any specific date range surfaces matches across all history
+- Add transactions.capped_hint to en/es locale files
+- Test(manager): add tests/test_cached_transactions_limit.py covering full-cache return, explicit limit, and copy-not-reference semantics
+
 ## 0.23.1
 - Persist transactions, balances and refresh stats in a single write at the END of the refresh round — previously _persist_transactions ran before the balance leg and stats build, so freshly-fetched balances/stats were saved one round late (or never, freezing the displayed balance). Root cause of accounts showing a stale balance despite daily auto-refresh
 - The 422 WRONG_TRANSACTIONS_PERIOD fallback now retries with progressively smaller windows (TX_FALLBACK_WINDOWS = [30, 7]) instead of re-requesting the identical 90-day window that was just rejected; an account is only marked failed once every window is rejected

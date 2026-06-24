@@ -632,12 +632,17 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             result[acc_id] = min(dates) if dates else None
         return result
 
-    def get_cached_transactions(self, limit: int = 100) -> list[dict[str, Any]]:
+    def get_cached_transactions(self, limit: int | None = None) -> list[dict[str, Any]]:
         """Get cached transactions (no API call).
 
-        Returns sanitized transactions for API responses.
-        Full details only — caller must check admin status.
+        Returns sanitized transactions for API responses. Full details only —
+        caller must check admin status. With ``limit=None`` (the default) the
+        whole cache is returned: it is already bounded by
+        ``HISTORY_RETENTION_MONTHS``, so the frontend can filter the full
+        history client-side instead of only the most recent N rows.
         """
+        if limit is None:
+            return list(self._transactions)
         return self._transactions[:limit]
 
     # Cache staleness threshold — matches the coordinator constant.
