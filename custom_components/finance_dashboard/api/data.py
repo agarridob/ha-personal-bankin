@@ -88,7 +88,16 @@ class FinanceDashboardTransactionsView(HomeAssistantView):
                 }
             )
 
-        transactions = manager.get_cached_transactions(limit=100)
+        # Serve the full cached history by default (bounded by
+        # HISTORY_RETENTION_MONTHS) so the frontend can filter across all
+        # months, not just the most recent rows. An optional ?limit= caps it.
+        limit: int | None = None
+        if "limit" in request.rel_url.query:
+            try:
+                limit = max(1, int(request.rel_url.query["limit"]))
+            except ValueError:
+                limit = None
+        transactions = manager.get_cached_transactions(limit=limit)
 
         sanitized = []
         for txn in transactions:

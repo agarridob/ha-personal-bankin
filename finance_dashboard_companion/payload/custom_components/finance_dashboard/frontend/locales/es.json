@@ -158,6 +158,7 @@
   "transactions.empty_cache": "Aún no hay movimientos en caché. Aparecerán aquí tras la próxima actualización.",
   "transactions.show_less": "Mostrar menos",
   "transactions.show_all": "Mostrar los $count",
+  "transactions.capped_hint": "Mostrando los primeros $shown de $total. Usa los filtros de arriba para acotar.",
   "transactions.pending": "pendiente",
   "transactions.pending_title": "Pendiente (sin contabilizar)",
   "transactions.filter.all": "Todos",

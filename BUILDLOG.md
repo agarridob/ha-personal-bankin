@@ -1,5 +1,15 @@
 # Build Log
 
+## 0.23.2 — 2026-06-24
+Version: 0.23.2
+Branch: fix/transactions-log-100-cap
+Changes:
+- fix(api): the /transactions endpoint served only the first 100 cached rows, so the panel's transaction log (and its date/category/search filters, which run client-side) could never reach older movements even though up to 24 months are cached. It now serves the full cached history by default (bounded by HISTORY_RETENTION_MONTHS), with an optional ?limit= override
+- fix(manager): get_cached_transactions(limit=None) now returns the whole cache (a copy) instead of defaulting to 100
+- fix(frontend): cap the expanded transaction log at EXPANDED_MAX (500) rendered rows with a "showing first N of M — narrow with filters" hint, so loading the full 24-month history never janks the panel; filters still apply before the cap so any specific date range surfaces matches across all history
+- feat(i18n): add transactions.capped_hint to en/es locale files
+- test(manager): add tests/test_cached_transactions_limit.py covering full-cache return, explicit limit, and copy-not-reference semantics
+
 ## 0.23.1 — 2026-06-24
 Version: 0.23.1
 Branch: fix/refresh-persistence-and-stale-accounts

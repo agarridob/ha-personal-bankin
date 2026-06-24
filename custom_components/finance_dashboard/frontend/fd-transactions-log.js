@@ -13,6 +13,11 @@
 // TX_CAT_LABELS comes from window._fd.CAT_LABELS (set by fd-shared-styles.js).
 
 const DEFAULT_LIMIT = 25;
+// Safety cap on rows rendered when expanded — the cache can hold up to 24
+// months of history, and dumping thousands of DOM nodes at once would jank
+// the panel. Filters narrow the set BEFORE this cap, so any specific search
+// (e.g. a date range) still surfaces matches across the full history.
+const EXPANDED_MAX = 500;
 
 const _filterDefaults = () => ({
   direction: "all",   // "all" | "income" | "expense"
@@ -245,6 +250,7 @@ class FdTransactionsLog extends HTMLElement {
 .tx-toggle { display: block; margin: 6px auto 0; padding: 6px 16px; background: transparent; border: 1px solid var(--bd); border-radius: 8px; color: var(--tx2); font-size: 12px; cursor: pointer; font-family: inherit; }
 .tx-toggle:hover { color: var(--tx2); border-color: var(--tx2); }
 .tx-empty { padding: 24px 18px; color: var(--tx2); font-size: 13px; text-align: center; }
+.tx-capped { padding: 10px 18px; color: var(--tx2); font-size: 12px; text-align: center; font-style: italic; }
 `;
 
     this.shadowRoot.innerHTML = `
@@ -382,8 +388,9 @@ class FdTransactionsLog extends HTMLElement {
       return;
     }
 
-    const limit = this._expanded ? filteredCount : DEFAULT_LIMIT;
+    const limit = this._expanded ? Math.min(filteredCount, EXPANDED_MAX) : DEFAULT_LIMIT;
     const visible = filtered.slice(0, limit);
+    const cappedByMax = this._expanded && filteredCount > EXPANDED_MAX;
 
     const eur = (v) => new Intl.NumberFormat("de-DE", {
       style: "currency", currency: "EUR",
@@ -426,7 +433,14 @@ class FdTransactionsLog extends HTMLElement {
         </button>`
       : "";
 
-    container.innerHTML = `<div class="tx-list">${rows}</div>${toggleBtn}`;
+    const cappedHint = cappedByMax
+      ? `<div class="tx-capped">${tSync("transactions.capped_hint", {
+          shown: String(EXPANDED_MAX),
+          total: String(filteredCount),
+        })}</div>`
+      : "";
+
+    container.innerHTML = `<div class="tx-list">${rows}</div>${cappedHint}${toggleBtn}`;
 
     const btn = sr.getElementById("toggleBtn");
     if (btn) {
