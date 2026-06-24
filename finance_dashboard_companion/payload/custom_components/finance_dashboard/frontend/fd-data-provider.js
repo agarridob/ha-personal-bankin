@@ -460,6 +460,7 @@ class FdDataProvider extends HTMLElement {
             ibanMasked: attrs.iban_masked || "****",
             currency: attrs.unit_of_measurement || "EUR",
             person: attrs.person || "",
+            logo: attrs.entity_picture || "",
           });
           data.totalBalance += val;
           data.accountCount++;

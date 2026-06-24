@@ -22,6 +22,12 @@
 
 
 
+
+## 0.23.0
+- Show balance per account — the total-balance KPI card is now clickable and expands an accordion listing each account (bank logo, custom name, masked IBAN ****1234, balance) below the stats row; collapsed by default, keyboard-accessible (role=button, Enter/Space, aria-expanded)
+- Expose the account bank logo to the panel by copying entity_picture into data.accounts[].logo in fd-data-provider (falls back to the bank/account initial when no logo is set)
+- Add stats.balance.toggle_accounts label to en/es locale files
+
 ## 0.22.0
 - Add opt-in once-a-day scheduled refresh — new options "auto_refresh_enabled" and "auto_refresh_hour" (0–23) arm a single live refresh per day at a user-chosen hour via async_track_time_change; disabled by default
 - The scheduled callback reuses the manual-refresh path (async_refresh_transactions + coordinator.async_refresh) and skips when demo mode is active or the daily rate limit is exhausted, so Enable Banking's 4/day per-ASPSP quota is never exceeded by the scheduler

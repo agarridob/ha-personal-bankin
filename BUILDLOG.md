@@ -1,5 +1,13 @@
 # Build Log
 
+## 0.23.0 — 2026-06-24
+Version: 0.23.0
+Branch: feat/per-account-balance
+Changes:
+- feat(frontend): show balance per account — the total-balance KPI card is now clickable and expands an accordion listing each account (bank logo, custom name, masked IBAN ****1234, balance) below the stats row; collapsed by default, keyboard-accessible (role=button, Enter/Space, aria-expanded)
+- feat(frontend): expose the account bank logo to the panel by copying entity_picture into data.accounts[].logo in fd-data-provider (falls back to the bank/account initial when no logo is set)
+- feat(i18n): add stats.balance.toggle_accounts label to en/es locale files
+
 ## 0.22.0 — 2026-06-21
 Version: 0.22.0
 Branch: feat/auto-refresh-schedule
