@@ -203,9 +203,10 @@ class FinanceDashboardSummaryView(HomeAssistantView):
         if not manager:
             return self.json({"error": "Not configured"}, status_code=404)
 
+        query = request.rel_url.query
         try:
-            month = int(request.rel_url.query["month"]) if "month" in request.rel_url.query else None
-            year = int(request.rel_url.query["year"]) if "year" in request.rel_url.query else None
+            month = int(query["month"]) if "month" in query else None
+            year = int(query["year"]) if "year" in query else None
             if month is not None and not (1 <= month <= 12):
                 return self.json({"error": "month must be 1-12"}, status_code=400)
         except ValueError:
