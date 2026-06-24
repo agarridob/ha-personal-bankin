@@ -72,6 +72,7 @@
   "toast.demo_started": "Datos de demo regenerados.",
   "toast.demo_stopped": "Modo demo detenido.",
   "stats.balance": "Saldo total",
+  "stats.balance.toggle_accounts": "Ver saldo por cuenta",
   "stats.expenses": "Gastos",
   "stats.income": "Ingresos",
   "stats.net": "Neto",

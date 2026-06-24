@@ -72,6 +72,7 @@
   "toast.demo_started": "Demo data regenerated.",
   "toast.demo_stopped": "Demo mode stopped.",
   "stats.balance": "Total balance",
+  "stats.balance.toggle_accounts": "Show balance per account",
   "stats.expenses": "Expenses",
   "stats.income": "Income",
   "stats.net": "Net",

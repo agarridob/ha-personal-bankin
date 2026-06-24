@@ -2,6 +2,13 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.23.0] — 2026-06-24
+
+### Added
+- Show balance per account — the total-balance KPI card is now clickable and expands an accordion listing each account (bank logo, custom name, masked IBAN ****1234, balance) below the stats row; collapsed by default, keyboard-accessible (role=button, Enter/Space, aria-expanded)
+- Expose the account bank logo to the panel by copying entity_picture into data.accounts[].logo in fd-data-provider (falls back to the bank/account initial when no logo is set)
+- Add stats.balance.toggle_accounts label to en/es locale files
+
 ## [0.22.0] — 2026-06-21
 
 ### Added
