@@ -18,7 +18,12 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.util import dt as dt_util
 
-from ..const import DEFAULT_REFRESH_DAYS, HISTORY_RETENTION_MONTHS, INITIAL_SYNC_DAYS
+from ..const import (
+    DEFAULT_REFRESH_DAYS,
+    HISTORY_RETENTION_MONTHS,
+    INITIAL_SYNC_DAYS,
+    TX_FALLBACK_WINDOWS,
+)
 
 if TYPE_CHECKING:
     pass
@@ -198,8 +203,13 @@ class RefreshMixin:
             days,
             "initial backfill" if not self.initial_sync_complete else "regular refresh",
         )
-        date_from = (dt_util.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         date_to = dt_util.now().strftime("%Y-%m-%d")
+
+        # Drop cache buckets for accounts that are no longer linked (residue
+        # from re-linking a bank under a new Enable Banking session). Without
+        # this the stale duplicates linger forever and get re-deduplicated on
+        # every load, masking the live accounts.
+        self._prune_stale_account_cache()
 
         errors: list[str] = []
         accounts_hit = 0
@@ -209,61 +219,8 @@ class RefreshMixin:
                 continue
 
             try:
-                txns = await client.async_get_transactions(
-                    account_id, date_from, date_to, psu_ip=psu_ip
-                )
-                accounts_hit += 1
-                booked = txns.get("booked", [])
-                pending = txns.get("pending", [])
-
-                # Tag each transaction with account info
-                display_name = account.get("custom_name") or account.get("name", "")
-                # Categorizer is initialised in async_initialize(); if refresh
-                # somehow races ahead of init, fall back to "other" so the txn
-                # is still persisted and visible in the UI.
-                categorizer = self._categorizer
-                if categorizer is None:
-                    _LOGGER.warning(
-                        "Categorizer not initialised — tagging %d booked + %d "
-                        "pending txns as 'other' for account %s",
-                        len(booked),
-                        len(pending),
-                        account_id,
-                    )
-                for txn in booked:
-                    txn["_account_id"] = account_id
-                    txn["_account_name"] = display_name
-                    txn["_account_type"] = account.get("type", "personal")
-                    txn["_account_person"] = account.get("person", "")
-                    txn["_account_ha_users"] = account.get("ha_users", [])
-                    txn["_status"] = "booked"
-                    txn["category"] = categorizer.categorize(txn) if categorizer else "other"
-
-                for txn in pending:
-                    txn["_account_id"] = account_id
-                    txn["_account_name"] = display_name
-                    txn["_status"] = "pending"
-                    txn["category"] = categorizer.categorize(txn) if categorizer else "other"
-
-                # Accumulate: keep historical booked txns outside the fetch
-                # window, merge with fresh data, prune beyond retention limit.
-                retention_cutoff = (
-                    dt_util.now() - timedelta(days=HISTORY_RETENTION_MONTHS * 30)
-                ).strftime("%Y-%m-%d")
-                existing = self._tx_by_account.get(account_id, [])
-                historical_booked = [
-                    t for t in existing
-                    if t.get("_status") == "booked"
-                    and t.get("bookingDate", "") < date_from
-                    and t.get("bookingDate", "") >= retention_cutoff
-                ]
-                self._tx_by_account[account_id] = historical_booked + booked + pending
-
-                _LOGGER.debug(
-                    "Account %s: %d booked, %d pending",
-                    account_id,
-                    len(booked),
-                    len(pending),
+                txns, used_from = await self._fetch_account_txns_with_fallback(
+                    client, account_id, days, date_to, psu_ip=psu_ip
                 )
             except RateLimitExceeded as _rle:
                 _LOGGER.warning(
@@ -280,51 +237,18 @@ class RefreshMixin:
                 )
                 break
             except TransactionPeriodExceeded:
-                # Bank rejected the lookback window (422 WRONG_TRANSACTIONS_PERIOD).
-                # Retry this account with the standard 90-day window so we still
-                # get recent transactions even if the full backfill isn't possible.
-                fallback_from = (
-                    dt_util.now() - timedelta(days=DEFAULT_REFRESH_DAYS)
-                ).strftime("%Y-%m-%d")
-                _LOGGER.warning(
-                    "Account %s: bank rejected %d-day window — retrying with %d days",
+                # Even the smallest fallback window was rejected by the bank.
+                _LOGGER.error(
+                    "All transaction windows rejected (422) for account %s — "
+                    "keeping cached transactions",
                     account_id,
-                    days,
-                    DEFAULT_REFRESH_DAYS,
                 )
-                try:
-                    txns = await client.async_get_transactions(
-                        account_id, fallback_from, date_to, psu_ip=psu_ip
-                    )
-                    accounts_hit += 1
-                    booked = txns.get("booked", [])
-                    pending = txns.get("pending", [])
-                    display_name = account.get("custom_name") or account.get("name", "")
-                    categorizer = self._categorizer
-                    for txn in booked:
-                        txn["_account_id"] = account_id
-                        txn["_account_name"] = display_name
-                        txn["_account_type"] = account.get("type", "personal")
-                        txn["_account_person"] = account.get("person", "")
-                        txn["_account_ha_users"] = account.get("ha_users", [])
-                        txn["_status"] = "booked"
-                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
-                    for txn in pending:
-                        txn["_account_id"] = account_id
-                        txn["_account_name"] = display_name
-                        txn["_status"] = "pending"
-                        txn["category"] = categorizer.categorize(txn) if categorizer else "other"
-                    existing = self._tx_by_account.get(account_id, [])
-                    historical_booked = [
-                        t for t in existing
-                        if t.get("_status") == "booked"
-                        and t.get("bookingDate", "") < fallback_from
-                        and t.get("bookingDate", "") >= retention_cutoff
-                    ]
-                    self._tx_by_account[account_id] = historical_booked + booked + pending
-                except Exception as exc:
-                    _LOGGER.exception("Fallback fetch also failed for account %s", account_id)
-                    errors.append(f"{account.get('name', account_id)}: {str(exc)[:120]}")
+                errors.append(
+                    f"{account.get('name', account_id)}: bank rejected all "
+                    "transaction date ranges (422)"
+                )
+                # R5: keep stale cache for this account — do NOT clear it
+                continue
             except Exception as exc:
                 _LOGGER.exception(
                     "Failed to fetch transactions for account %s",
@@ -332,6 +256,10 @@ class RefreshMixin:
                 )
                 errors.append(f"{account.get('name', account_id)}: {str(exc)[:120]}")
                 # R5: keep stale cache for this account — do NOT clear it
+                continue
+
+            accounts_hit += 1
+            self._ingest_account_txns(account, account_id, txns, used_from)
 
         # F10: drop the migration-era __unknown__ bucket after the first
         # successful live refresh — those legacy entries are now superseded
@@ -407,13 +335,6 @@ class RefreshMixin:
                 DEFAULT_REFRESH_DAYS,
             )
 
-        # Persist to encrypted .storage/
-        await self._persist_transactions()
-
-        # Dismiss the Repairs issue now that we have historical data.
-        if _completing_initial_sync:
-            await self._dismiss_initial_sync_issue()
-
         # Fire events for newly detected transactions — must not crash refresh
         try:
             from ..events import fire_transaction_new
@@ -468,6 +389,17 @@ class RefreshMixin:
             errors=errors,
         )
 
+        # Persist LAST, once the balance leg and stats are finalised, so the
+        # freshly-fetched balances and stats are saved in the same round. (A
+        # persist before the balance leg would write the previous round's
+        # balances, leaving the dashboard one refresh stale — or frozen if a
+        # later run never advanced.)
+        await self._persist_transactions()
+
+        # Dismiss the Repairs issue now that we have historical data.
+        if _completing_initial_sync:
+            await self._dismiss_initial_sync_issue()
+
         return all_transactions
 
     @staticmethod
@@ -492,6 +424,144 @@ class RefreshMixin:
             "finished_at": finished.isoformat(),
             "errors": list(errors)[:5],  # cap payload size
         }
+
+    def _prune_stale_account_cache(self) -> None:
+        """Drop cached transactions/balances for no-longer-linked accounts.
+
+        When a bank is re-linked it gets a fresh Enable Banking account id
+        (session-scoped). The old id keeps its bucket in ``_tx_by_account`` and
+        ``_balances`` forever, producing duplicate transactions on every load
+        and stale balance entries. Keep only buckets for currently-linked
+        accounts; the ``__unknown__`` migration bucket is preserved (handled
+        separately after the first successful live hit).
+        """
+        active_ids = {a.get("id") for a in self._accounts if a.get("id")}
+        for store in (self._tx_by_account, self._balances):
+            stale = [
+                acc_id
+                for acc_id in store
+                if acc_id != "__unknown__" and acc_id not in active_ids
+            ]
+            for acc_id in stale:
+                store.pop(acc_id, None)
+            if stale:
+                _LOGGER.info(
+                    "Pruned %d stale account bucket(s) from cache: %s",
+                    len(stale),
+                    ", ".join(stale),
+                )
+
+    async def _fetch_account_txns_with_fallback(
+        self,
+        client: Any,
+        account_id: str,
+        days: int,
+        date_to: str,
+        psu_ip: str | None = None,
+    ) -> tuple[dict[str, Any], str]:
+        """Fetch transactions, retrying with smaller windows on a 422.
+
+        Some ASPSPs reject the requested period (HTTP 422
+        WRONG_TRANSACTIONS_PERIOD) once a consent ages — even the default
+        90-day window. Try the requested window first, then each fallback
+        window in ``TX_FALLBACK_WINDOWS`` that is strictly smaller, so we still
+        get recent transactions instead of giving up. Returns the fetched
+        payload and the ``date_from`` that actually succeeded.
+
+        Raises ``TransactionPeriodExceeded`` only if every window is rejected.
+        """
+        from ..enablebanking_client import TransactionPeriodExceeded
+
+        windows = [days] + [w for w in TX_FALLBACK_WINDOWS if w < days]
+        last_exc: TransactionPeriodExceeded | None = None
+        for idx, window in enumerate(windows):
+            date_from = (dt_util.now() - timedelta(days=window)).strftime("%Y-%m-%d")
+            try:
+                txns = await client.async_get_transactions(
+                    account_id, date_from, date_to, psu_ip=psu_ip
+                )
+                if idx > 0:
+                    _LOGGER.warning(
+                        "Account %s: fetched transactions with reduced %d-day "
+                        "window after wider window(s) were rejected (422)",
+                        account_id,
+                        window,
+                    )
+                return txns, date_from
+            except TransactionPeriodExceeded as exc:
+                last_exc = exc
+                has_more = idx < len(windows) - 1
+                _LOGGER.warning(
+                    "Account %s: bank rejected %d-day window (422)%s",
+                    account_id,
+                    window,
+                    " — retrying with a smaller window" if has_more else "",
+                )
+        raise last_exc  # type: ignore[misc]
+
+    def _ingest_account_txns(
+        self,
+        account: dict[str, Any],
+        account_id: str,
+        txns: dict[str, Any],
+        date_from: str,
+    ) -> None:
+        """Tag, categorize and merge a freshly-fetched account payload.
+
+        Keeps historical booked transactions older than the fetched window
+        (down to the retention limit) and replaces everything inside the
+        window with the fresh booked + pending data.
+        """
+        booked = txns.get("booked", [])
+        pending = txns.get("pending", [])
+
+        display_name = account.get("custom_name") or account.get("name", "")
+        # Categorizer is initialised in async_initialize(); if refresh somehow
+        # races ahead of init, fall back to "other" so the txn is still
+        # persisted and visible in the UI.
+        categorizer = self._categorizer
+        if categorizer is None:
+            _LOGGER.warning(
+                "Categorizer not initialised — tagging %d booked + %d "
+                "pending txns as 'other' for account %s",
+                len(booked),
+                len(pending),
+                account_id,
+            )
+        for txn in booked:
+            txn["_account_id"] = account_id
+            txn["_account_name"] = display_name
+            txn["_account_type"] = account.get("type", "personal")
+            txn["_account_person"] = account.get("person", "")
+            txn["_account_ha_users"] = account.get("ha_users", [])
+            txn["_status"] = "booked"
+            txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+
+        for txn in pending:
+            txn["_account_id"] = account_id
+            txn["_account_name"] = display_name
+            txn["_status"] = "pending"
+            txn["category"] = categorizer.categorize(txn) if categorizer else "other"
+
+        retention_cutoff = (
+            dt_util.now() - timedelta(days=HISTORY_RETENTION_MONTHS * 30)
+        ).strftime("%Y-%m-%d")
+        existing = self._tx_by_account.get(account_id, [])
+        historical_booked = [
+            t
+            for t in existing
+            if t.get("_status") == "booked"
+            and t.get("bookingDate", "") < date_from
+            and t.get("bookingDate", "") >= retention_cutoff
+        ]
+        self._tx_by_account[account_id] = historical_booked + booked + pending
+
+        _LOGGER.debug(
+            "Account %s: %d booked, %d pending",
+            account_id,
+            len(booked),
+            len(pending),
+        )
 
     async def _async_refresh_balances_live(
         self,

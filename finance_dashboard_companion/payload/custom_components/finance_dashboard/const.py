@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.23.0"
+VERSION = "0.23.1"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -30,6 +30,11 @@ SESSION_MAX_DAYS = 180  # Enable Banking session validity
 HISTORY_RETENTION_MONTHS = 24  # How far back to keep accumulated transactions
 INITIAL_SYNC_DAYS = 365  # Days to fetch on the very first successful refresh
 DEFAULT_REFRESH_DAYS = 90  # Days for all subsequent refreshes
+# Progressively smaller windows tried when a bank rejects the requested
+# transaction period with HTTP 422 WRONG_TRANSACTIONS_PERIOD. Each must be
+# strictly smaller than DEFAULT_REFRESH_DAYS so the retry is a real fallback
+# (some ASPSPs cap history well below 90 days once a consent ages).
+TX_FALLBACK_WINDOWS = [30, 7]
 SESSION_TIMEOUT_MINUTES = 30
 ENABLEBANKING_RATE_LIMIT_DAILY = 4
 
