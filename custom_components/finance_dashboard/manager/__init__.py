@@ -86,6 +86,12 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         # failing silently keeps an old timestamp — surfaced in the account
         # editor so the user notices instead of assuming everything refreshed.
         self._last_success_by_account: dict[str, str] = {}
+        # Per-account error from the last refresh attempt (account_id → dict:
+        # {"type": slug, "message": str, "at": ISO}). Set when an account's
+        # live fetch fails, cleared when it next succeeds. Lets the account
+        # editor show an explicit reason ("session expired — re-authorize")
+        # immediately, instead of waiting for the timestamp to go stale.
+        self._last_error_by_account: dict[str, dict[str, Any]] = {}
         self._rate_limited_until: datetime | None = None
         self._transfer_override_store = Store(hass, 1, STORAGE_KEY_TRANSFER_OVERRIDES)
         self._transfer_overrides: dict[str, bool] = {}
@@ -314,6 +320,16 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                 self._last_success_by_account = {
                     str(k): str(v) for k, v in last_success.items() if v
                 }
+            last_errors = cached.get("last_error_by_account")
+            if isinstance(last_errors, dict):
+                self._last_error_by_account = {
+                    str(k): v for k, v in last_errors.items() if isinstance(v, dict)
+                }
+            # Migration: caches written before this feature existed have no
+            # per-account success map. Seed it from the global last_refresh so
+            # existing installs show the last known refresh instead of a
+            # misleading "never" (see _backfill_last_success_from_global).
+            self._backfill_last_success_from_global()
             self._initial_sync_complete = bool(cached.get("initial_sync_complete", False))
             _LOGGER.info(
                 "Loaded %d cached transactions (last refresh: %s, balances: %d)",
@@ -643,6 +659,24 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             result[acc_id] = min(dates) if dates else None
         return result
 
+    def _backfill_last_success_from_global(self) -> None:
+        """Seed the per-account success map from the global last_refresh.
+
+        One-time migration for caches written before per-account success
+        tracking existed: with no map, every account would render "never" even
+        though the last global refresh did touch them. Seeds each account that
+        currently holds cached transactions with ``_last_refresh`` so existing
+        installs show the last known refresh. Real per-account values take over
+        on the next refresh — an account whose bank then fails silently stops
+        advancing while the others move on. No-op once the map is populated.
+        """
+        if self._last_success_by_account or not self._last_refresh:
+            return
+        iso = self._last_refresh.isoformat()
+        for acc_id, txs in self._tx_by_account.items():
+            if acc_id != "__unknown__" and txs:
+                self._last_success_by_account[acc_id] = iso
+
     def get_last_success_dates(self) -> dict[str, str | None]:
         """Return the last successful transaction fetch per account_id (ISO), or None.
 
@@ -654,6 +688,20 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             acc_id: self._last_success_by_account.get(acc_id)
             for acc_id in (acc.get("id") for acc in self._accounts)
             if acc_id
+        }
+
+    def get_account_errors(self) -> dict[str, dict[str, Any]]:
+        """Return the last refresh error per linked account_id, or empty dict.
+
+        Pure cache read. Each value is ``{"type", "message", "at"}`` — set when
+        the account's last live fetch failed and cleared when it next succeeds.
+        Scoped to currently-linked accounts so residue from removed accounts
+        never leaks.
+        """
+        return {
+            acc_id: self._last_error_by_account[acc_id]
+            for acc_id in (acc.get("id") for acc in self._accounts)
+            if acc_id and acc_id in self._last_error_by_account
         }
 
     def get_cached_transactions(self, limit: int | None = None) -> list[dict[str, Any]]:

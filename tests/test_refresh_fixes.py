@@ -184,3 +184,67 @@ def test_last_success_dates_scoped_to_linked_accounts() -> None:
 
     assert result == {"acc-ok": ts, "acc-stale": None}
     assert "acc-gone" not in result
+
+
+def test_backfill_seeds_missing_map_from_global_refresh() -> None:
+    """Pre-feature caches: seed accounts holding tx from the global last_refresh."""
+    mgr = _bare_manager()
+    mgr._last_success_by_account = {}
+    mgr._last_refresh = dt_util.now()
+    mgr._tx_by_account = {
+        "acc-a": [{"transactionId": "1"}],
+        "acc-empty": [],  # no cached tx → not seeded
+        "__unknown__": [{"transactionId": "2"}],  # migration bucket → skipped
+    }
+
+    mgr._backfill_last_success_from_global()
+
+    iso = mgr._last_refresh.isoformat()
+    assert mgr._last_success_by_account == {"acc-a": iso}
+
+
+def test_backfill_no_op_when_map_already_populated() -> None:
+    """An existing per-account map is authoritative — backfill must not touch it."""
+    mgr = _bare_manager()
+    existing = {"acc-a": "2026-01-01T00:00:00+00:00"}
+    mgr._last_success_by_account = dict(existing)
+    mgr._last_refresh = dt_util.now()
+    mgr._tx_by_account = {"acc-a": [{"transactionId": "1"}], "acc-b": [{"transactionId": "2"}]}
+
+    mgr._backfill_last_success_from_global()
+
+    assert mgr._last_success_by_account == existing
+
+
+# ---------------------------------------------------------------------------
+# Per-account error classification + surfacing
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ('401 {"error":"EXPIRED_SESSION","message":"Session is expired"}', "session_expired"),
+        ("Session is expired", "session_expired"),
+        ('401 {"error":"INVALID_SESSION"}', "auth_error"),
+        ("500 internal server error", "error"),
+    ],
+)
+def test_classify_account_error(message: str, expected: str) -> None:
+    assert FinanceDashboardManager._classify_account_error(Exception(message)) == expected
+
+
+def test_get_account_errors_scoped_and_typed() -> None:
+    """Only linked accounts surface; success on an account clears its error."""
+    mgr = _bare_manager()
+    mgr._accounts = [{"id": "acc-bad"}, {"id": "acc-ok"}]
+    mgr._last_error_by_account = {}
+    mgr._record_account_error("acc-bad", "session_expired", "Session is expired")
+    # Residue from an unlinked account must not leak into the scoped view.
+    mgr._record_account_error("acc-gone", "error", "boom")
+
+    errors = mgr.get_account_errors()
+
+    assert set(errors) == {"acc-bad"}
+    assert errors["acc-bad"]["type"] == "session_expired"
+    assert "at" in errors["acc-bad"]

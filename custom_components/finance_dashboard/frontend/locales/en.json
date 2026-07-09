@@ -38,6 +38,8 @@
   "wizard.step.3.oldest_tx": "Oldest transaction: $date",
   "wizard.step.3.last_success": "Last successful refresh: $date",
   "wizard.step.3.last_success_never": "Last successful refresh: never",
+  "wizard.step.3.refresh_error_session_expired": "⚠ Session expired — reconnect this bank",
+  "wizard.step.3.refresh_error": "⚠ Last refresh failed",
   "wizard.step.3.add_bank": "+ Connect new bank",
   "wizard.step.4.title": "Connection successful",
   "wizard.step.4.body": "$count account(s) connected. Fetching 12 months of transaction history…",

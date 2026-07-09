@@ -177,6 +177,7 @@ class FdSetupWizard extends HTMLElement {
         iban: acc.iban_masked || "****",
         oldest_transaction: acc.oldest_transaction || null,
         last_success_refresh: acc.last_success_refresh || null,
+        refresh_error: acc.refresh_error || null,
       }));
     } catch (e) {
       this._error = (e && (e.error || e.message)) || String(e);
@@ -630,6 +631,12 @@ class FdSetupWizard extends HTMLElement {
   font-weight: 600;
   opacity: 1;
 }
+.account-card .acc-header .acc-refresh-error {
+  font-size: 11px;
+  color: var(--error-color, #e05561);
+  font-weight: 600;
+  margin-top: 2px;
+}
 .form-row {
   display: flex;
   gap: 10px;
@@ -902,6 +909,17 @@ class FdSetupWizard extends HTMLElement {
           })()
         : "";
 
+      // Explicit failure reason from the last refresh, so an expired PSD2
+      // session is actionable immediately instead of waiting for staleness.
+      const errorLabel = this._editMode && acc.refresh_error
+        ? (() => {
+            const key = acc.refresh_error === "session_expired"
+              ? "wizard.step.3.refresh_error_session_expired"
+              : "wizard.step.3.refresh_error";
+            return `<div class="acc-refresh-error">${tSync(key)}</div>`;
+          })()
+        : "";
+
       return `
         <div class="account-card" data-idx="${idx}">
           <div class="acc-header">
@@ -911,6 +929,7 @@ class FdSetupWizard extends HTMLElement {
               <div class="acc-iban">${ibanMasked}</div>
               ${oldestLabel}
               ${lastSuccessLabel}
+              ${errorLabel}
             </div>
           </div>
           <div class="form-row">

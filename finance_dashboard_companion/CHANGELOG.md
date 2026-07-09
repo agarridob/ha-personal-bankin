@@ -28,10 +28,12 @@
 
 ## 0.24.0
 - Track the timestamp of the last *successful* transaction fetch per account (_last_success_by_account). A live fetch that raises (stale session, 422, rate-limit) skips the update and keeps the previous timestamp, so an account whose bank is failing silently no longer looks refreshed. Persisted in the transaction cache and surfaced via get_last_success_dates()
-- /setup/status now returns last_success_refresh per account alongside oldest_transaction
-- The "Edit accounts" cards show "Last successful refresh: <datetime>" under "Oldest transaction". The line turns red/bold when the account has not refreshed in over 48h (or never), making a silently-failing bank like BBVA visually obvious
-- Add wizard.step.3.last_success and wizard.step.3.last_success_never to en/es locale files
-- Test(manager): add coverage for get_last_success_dates scoping (linked accounts only, never-refreshed maps to None, unlinked residue excluded)
+- Migrate pre-feature caches by seeding the per-account success map from the global last_refresh, so existing installs show the last known refresh instead of a misleading "never" until the next refresh diverges the values
+- Track the last refresh error per account (_last_error_by_account) with a classified type — session_expired, auth_error or error — set on failure and cleared on the next success; persisted and exposed via get_account_errors()
+- /setup/status now returns last_success_refresh and refresh_error per account alongside oldest_transaction
+- The "Edit accounts" cards show "Last successful refresh: <datetime>" under "Oldest transaction" (red/bold when older than 48h or never) plus an explicit "⚠ Session expired — reconnect this bank" line when the last refresh failed, so a silently-failing bank like BBVA is obvious and actionable
+- Add wizard.step.3.last_success[_never] and wizard.step.3.refresh_error[_session_expired] to en/es locale files
+- Test(manager): add coverage for get_last_success_dates scoping, the global-refresh backfill migration, error classification, and get_account_errors scoping
 
 ## 0.23.2
 - The /transactions endpoint served only the first 100 cached rows, so the panel's transaction log (and its date/category/search filters, which run client-side) could never reach older movements even though up to 24 months are cached. It now serves the full cached history by default (bounded by HISTORY_RETENTION_MONTHS), with an optional ?limit= override
