@@ -235,8 +235,9 @@ class RefreshMixin:
                     f"Rate limit hit on {account.get('name', account_id)} — "
                     "daily quota (4/day) exhausted"
                 )
+                self._record_account_error(account_id, "rate_limited", str(_rle))
                 break
-            except TransactionPeriodExceeded:
+            except TransactionPeriodExceeded as exc:
                 # Even the smallest fallback window was rejected by the bank.
                 _LOGGER.error(
                     "All transaction windows rejected (422) for account %s — "
@@ -247,6 +248,7 @@ class RefreshMixin:
                     f"{account.get('name', account_id)}: bank rejected all "
                     "transaction date ranges (422)"
                 )
+                self._record_account_error(account_id, "period_rejected", str(exc))
                 # R5: keep stale cache for this account — do NOT clear it
                 continue
             except Exception as exc:
@@ -255,11 +257,20 @@ class RefreshMixin:
                     account_id,
                 )
                 errors.append(f"{account.get('name', account_id)}: {str(exc)[:120]}")
+                self._record_account_error(
+                    account_id, self._classify_account_error(exc), str(exc)
+                )
                 # R5: keep stale cache for this account — do NOT clear it
                 continue
 
             accounts_hit += 1
             self._ingest_account_txns(account, account_id, txns, used_from)
+            # Record the successful fetch per account. Accounts that raised
+            # above (stale session, 422, rate-limit) skip this line and keep
+            # their previous timestamp, so a silently-failing bank stands out.
+            self._last_success_by_account[account_id] = dt_util.now().isoformat()
+            # Clear any prior error now that this account fetched cleanly.
+            self._last_error_by_account.pop(account_id, None)
 
         # F10: drop the migration-era __unknown__ bucket after the first
         # successful live refresh — those legacy entries are now superseded
@@ -498,6 +509,31 @@ class RefreshMixin:
                     " — retrying with a smaller window" if has_more else "",
                 )
         raise last_exc  # type: ignore[misc]
+
+    @staticmethod
+    def _classify_account_error(exc: Exception) -> str:
+        """Map a fetch exception to a stable, UI-friendly error-type slug.
+
+        ``session_expired`` is called out specifically because it is the common
+        PSD2 failure (Enable Banking sessions lapse and must be re-authorized)
+        and needs a distinct, actionable message in the account editor.
+        """
+        text = str(exc)
+        if "EXPIRED_SESSION" in text or "Session is expired" in text:
+            return "session_expired"
+        if "401" in text or "INVALID_SESSION" in text:
+            return "auth_error"
+        return "error"
+
+    def _record_account_error(
+        self, account_id: str, error_type: str, message: str
+    ) -> None:
+        """Store the last refresh error for *account_id* (see _last_error_by_account)."""
+        self._last_error_by_account[account_id] = {
+            "type": error_type,
+            "message": message[:200],
+            "at": dt_util.now().isoformat(),
+        }
 
     def _ingest_account_txns(
         self,

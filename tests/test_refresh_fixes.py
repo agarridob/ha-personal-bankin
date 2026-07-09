@@ -164,3 +164,147 @@ def test_ingest_tags_and_keeps_historical_outside_window() -> None:
     assert new["_account_name"] == "My Acct"
     assert new["category"] == "other"
     assert new["_status"] == "booked"
+
+
+# ---------------------------------------------------------------------------
+# Per-account last-successful-refresh tracking
+# ---------------------------------------------------------------------------
+
+
+def test_last_success_dates_scoped_to_linked_accounts() -> None:
+    """Only linked accounts appear; a never-refreshed account maps to None."""
+    mgr = _bare_manager()
+    mgr._accounts = [{"id": "acc-ok"}, {"id": "acc-stale"}]
+    ts = dt_util.now().isoformat()
+    # acc-ok refreshed; acc-stale never did; acc-gone is stale residue and
+    # must not leak into the result once it is no longer linked.
+    mgr._last_success_by_account = {"acc-ok": ts, "acc-gone": ts}
+
+    result = mgr.get_last_success_dates()
+
+    assert result == {"acc-ok": ts, "acc-stale": None}
+    assert "acc-gone" not in result
+
+
+def test_backfill_seeds_missing_map_from_global_refresh() -> None:
+    """Pre-feature caches: seed accounts holding tx from the global last_refresh."""
+    mgr = _bare_manager()
+    mgr._last_success_by_account = {}
+    mgr._last_refresh = dt_util.now()
+    mgr._tx_by_account = {
+        "acc-a": [{"transactionId": "1"}],
+        "acc-empty": [],  # no cached tx → not seeded
+        "__unknown__": [{"transactionId": "2"}],  # migration bucket → skipped
+    }
+
+    mgr._backfill_last_success_from_global()
+
+    iso = mgr._last_refresh.isoformat()
+    assert mgr._last_success_by_account == {"acc-a": iso}
+
+
+def test_backfill_no_op_when_map_already_populated() -> None:
+    """An existing per-account map is authoritative — backfill must not touch it."""
+    mgr = _bare_manager()
+    existing = {"acc-a": "2026-01-01T00:00:00+00:00"}
+    mgr._last_success_by_account = dict(existing)
+    mgr._last_refresh = dt_util.now()
+    mgr._tx_by_account = {"acc-a": [{"transactionId": "1"}], "acc-b": [{"transactionId": "2"}]}
+
+    mgr._backfill_last_success_from_global()
+
+    assert mgr._last_success_by_account == existing
+
+
+# ---------------------------------------------------------------------------
+# Per-account error classification + surfacing
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ('401 {"error":"EXPIRED_SESSION","message":"Session is expired"}', "session_expired"),
+        ("Session is expired", "session_expired"),
+        ('401 {"error":"INVALID_SESSION"}', "auth_error"),
+        ("500 internal server error", "error"),
+    ],
+)
+def test_classify_account_error(message: str, expected: str) -> None:
+    assert FinanceDashboardManager._classify_account_error(Exception(message)) == expected
+
+
+def test_get_account_errors_scoped_and_typed() -> None:
+    """Only linked accounts surface; success on an account clears its error."""
+    mgr = _bare_manager()
+    mgr._accounts = [{"id": "acc-bad"}, {"id": "acc-ok"}]
+    mgr._last_error_by_account = {}
+    mgr._record_account_error("acc-bad", "session_expired", "Session is expired")
+    # Residue from an unlinked account must not leak into the scoped view.
+    mgr._record_account_error("acc-gone", "error", "boom")
+
+    errors = mgr.get_account_errors()
+
+    assert set(errors) == {"acc-bad"}
+    assert errors["acc-bad"]["type"] == "session_expired"
+    assert "at" in errors["acc-bad"]
+
+
+# ---------------------------------------------------------------------------
+# Re-link history preservation — re-key cached data onto fresh account ids
+# ---------------------------------------------------------------------------
+
+
+async def test_remap_account_ids_moves_history_and_state() -> None:
+    """Re-keying migrates tx bucket (re-tagged), balances and per-account state."""
+    mgr = _bare_manager()
+    mgr._demo_mode = False
+    mgr._tx_by_account = {
+        "old": [
+            {"transactionId": "t1", "_account_id": "old", "bookingDate": "2026-03-01"},
+        ],
+        "other-bank": [{"transactionId": "z", "_account_id": "other-bank"}],
+    }
+    mgr._balances = {"old": {"balances": []}}
+    mgr._previous_balances = {"old": 12.5}
+    mgr._last_success_by_account = {"old": "2026-07-01T00:00:00+00:00"}
+    mgr._last_error_by_account = {"old": {"type": "session_expired"}}
+
+    persisted: list[bool] = []
+
+    async def _fake_persist() -> None:
+        persisted.append(True)
+
+    mgr._persist_transactions = _fake_persist  # type: ignore[method-assign]
+
+    migrated = await mgr.async_remap_account_ids({"old": "new", "": "x", "same": "same"})
+
+    assert migrated == 1
+    assert "old" not in mgr._tx_by_account
+    assert mgr._tx_by_account["new"][0]["_account_id"] == "new"
+    assert mgr._tx_by_account["new"][0]["transactionId"] == "t1"
+    assert mgr._balances == {"new": {"balances": []}}
+    assert mgr._previous_balances == {"new": 12.5}
+    assert mgr._last_success_by_account == {"new": "2026-07-01T00:00:00+00:00"}
+    assert mgr._last_error_by_account == {"new": {"type": "session_expired"}}
+    assert mgr._tx_by_account["other-bank"], "untouched banks must be preserved"
+    assert persisted == [True]
+
+
+async def test_remap_account_ids_noop_when_nothing_to_move() -> None:
+    """No cached bucket for the old id → no migration, no persist."""
+    mgr = _bare_manager()
+    mgr._tx_by_account = {}
+    mgr._balances = {}
+    mgr._previous_balances = {}
+    mgr._last_success_by_account = {}
+    mgr._last_error_by_account = {}
+
+    async def _fail_persist() -> None:  # pragma: no cover - must not run
+        raise AssertionError("persist must not be called when nothing moved")
+
+    mgr._persist_transactions = _fail_persist  # type: ignore[method-assign]
+
+    migrated = await mgr.async_remap_account_ids({"old": "new"})
+
+    assert migrated == 0

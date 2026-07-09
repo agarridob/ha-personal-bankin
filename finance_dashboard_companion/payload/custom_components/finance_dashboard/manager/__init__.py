@@ -80,6 +80,18 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._transactions: list[dict[str, Any]] = []
         self._balances: dict[str, Any] = {}
         self._last_refresh: datetime | None = None
+        # Per-account timestamp of the last *successful* transaction fetch
+        # (account_id → ISO string). A live fetch that raises (stale session,
+        # 422, rate-limit) never updates this, so an account whose bank is
+        # failing silently keeps an old timestamp — surfaced in the account
+        # editor so the user notices instead of assuming everything refreshed.
+        self._last_success_by_account: dict[str, str] = {}
+        # Per-account error from the last refresh attempt (account_id → dict:
+        # {"type": slug, "message": str, "at": ISO}). Set when an account's
+        # live fetch fails, cleared when it next succeeds. Lets the account
+        # editor show an explicit reason ("session expired — re-authorize")
+        # immediately, instead of waiting for the timestamp to go stale.
+        self._last_error_by_account: dict[str, dict[str, Any]] = {}
         self._rate_limited_until: datetime | None = None
         self._transfer_override_store = Store(hass, 1, STORAGE_KEY_TRANSFER_OVERRIDES)
         self._transfer_overrides: dict[str, bool] = {}
@@ -303,6 +315,21 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             stats = cached.get("last_refresh_stats")
             if isinstance(stats, dict):
                 self._last_refresh_stats = stats
+            last_success = cached.get("last_success_by_account")
+            if isinstance(last_success, dict):
+                self._last_success_by_account = {
+                    str(k): str(v) for k, v in last_success.items() if v
+                }
+            last_errors = cached.get("last_error_by_account")
+            if isinstance(last_errors, dict):
+                self._last_error_by_account = {
+                    str(k): v for k, v in last_errors.items() if isinstance(v, dict)
+                }
+            # Migration: caches written before this feature existed have no
+            # per-account success map. Seed it from the global last_refresh so
+            # existing installs show the last known refresh instead of a
+            # misleading "never" (see _backfill_last_success_from_global).
+            self._backfill_last_success_from_global()
             self._initial_sync_complete = bool(cached.get("initial_sync_complete", False))
             _LOGGER.info(
                 "Loaded %d cached transactions (last refresh: %s, balances: %d)",
@@ -344,6 +371,48 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                 "async_set_accounts: failed to persist to config entry",
                 exc_info=True,
             )
+
+    async def async_remap_account_ids(self, id_remap: dict[str, str]) -> int:
+        """Re-key cached per-account data when a bank re-link assigns new ids.
+
+        Enable Banking account ids are session-scoped, so re-authorizing a bank
+        yields fresh ids for the same physical accounts (see
+        ``_prune_stale_account_cache``). Given an old→new id map — built at the
+        setup layer by matching the stable IBAN — this moves the transaction and
+        balance history (plus per-account refresh state) onto the new ids, so
+        the prune keeps it instead of dropping it and the user does not lose
+        their history on re-link. Persists once if anything moved. Returns the
+        number of accounts migrated.
+        """
+        migrated = 0
+        for old_id, new_id in id_remap.items():
+            if not old_id or not new_id or old_id == new_id:
+                continue
+            if old_id not in self._tx_by_account and old_id not in self._balances:
+                continue
+            if old_id in self._tx_by_account:
+                bucket = self._tx_by_account.pop(old_id)
+                for txn in bucket:
+                    txn["_account_id"] = new_id
+                # Merge in case the new id already has a bucket; the refresh
+                # de-duplicates by transactionId afterwards.
+                self._tx_by_account.setdefault(new_id, []).extend(bucket)
+            for store in (
+                self._balances,
+                self._previous_balances,
+                self._last_success_by_account,
+                self._last_error_by_account,
+            ):
+                if old_id in store:
+                    store[new_id] = store.pop(old_id)
+            migrated += 1
+        if migrated:
+            await self._persist_transactions()
+            _LOGGER.info(
+                "Re-keyed %d account bucket(s) after bank re-link — history preserved",
+                migrated,
+            )
+        return migrated
 
     # ------------------------------------------------------------------
     # Account refresh
@@ -631,6 +700,51 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             ]
             result[acc_id] = min(dates) if dates else None
         return result
+
+    def _backfill_last_success_from_global(self) -> None:
+        """Seed the per-account success map from the global last_refresh.
+
+        One-time migration for caches written before per-account success
+        tracking existed: with no map, every account would render "never" even
+        though the last global refresh did touch them. Seeds each account that
+        currently holds cached transactions with ``_last_refresh`` so existing
+        installs show the last known refresh. Real per-account values take over
+        on the next refresh — an account whose bank then fails silently stops
+        advancing while the others move on. No-op once the map is populated.
+        """
+        if self._last_success_by_account or not self._last_refresh:
+            return
+        iso = self._last_refresh.isoformat()
+        for acc_id, txs in self._tx_by_account.items():
+            if acc_id != "__unknown__" and txs:
+                self._last_success_by_account[acc_id] = iso
+
+    def get_last_success_dates(self) -> dict[str, str | None]:
+        """Return the last successful transaction fetch per account_id (ISO), or None.
+
+        Pure cache read. Populated by ``async_refresh_transactions`` each time an
+        account's live fetch completes without raising, so a lagging value points
+        at an account whose bank is failing silently.
+        """
+        return {
+            acc_id: self._last_success_by_account.get(acc_id)
+            for acc_id in (acc.get("id") for acc in self._accounts)
+            if acc_id
+        }
+
+    def get_account_errors(self) -> dict[str, dict[str, Any]]:
+        """Return the last refresh error per linked account_id, or empty dict.
+
+        Pure cache read. Each value is ``{"type", "message", "at"}`` — set when
+        the account's last live fetch failed and cleared when it next succeeds.
+        Scoped to currently-linked accounts so residue from removed accounts
+        never leaks.
+        """
+        return {
+            acc_id: self._last_error_by_account[acc_id]
+            for acc_id in (acc.get("id") for acc in self._accounts)
+            if acc_id and acc_id in self._last_error_by_account
+        }
 
     def get_cached_transactions(self, limit: int | None = None) -> list[dict[str, Any]]:
         """Get cached transactions (no API call).

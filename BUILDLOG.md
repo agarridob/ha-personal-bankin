@@ -1,5 +1,18 @@
 # Build Log
 
+## 0.24.0 — 2026-07-09
+Version: 0.24.0
+Branch: feat/per-account-last-success-refresh
+Changes:
+- feat(manager): track the timestamp of the last *successful* transaction fetch per account (_last_success_by_account). A live fetch that raises (stale session, 422, rate-limit) skips the update and keeps the previous timestamp, so an account whose bank is failing silently no longer looks refreshed. Persisted in the transaction cache and surfaced via get_last_success_dates()
+- feat(manager): migrate pre-feature caches by seeding the per-account success map from the global last_refresh, so existing installs show the last known refresh instead of a misleading "never" until the next refresh diverges the values
+- feat(manager): track the last refresh error per account (_last_error_by_account) with a classified type — session_expired (EXPIRED_SESSION / "Session is expired"), auth_error (401 / INVALID_SESSION) or error — set on failure and cleared on the next success; persisted and exposed via get_account_errors()
+- feat(api): /setup/status now returns last_success_refresh and refresh_error per account alongside oldest_transaction
+- feat(frontend): the "Edit accounts" cards show "Last successful refresh: <datetime>" under "Oldest transaction" (red/bold when older than 48h or never) plus an explicit "⚠ Session expired — reconnect this bank" line when the last refresh failed, so a silently-failing bank like BBVA is obvious and actionable
+- feat(manager): preserve transaction history across a bank re-link. Enable Banking assigns fresh session-scoped account ids on re-auth, so re-linking a bank used to prune the old cache buckets and lose all history older than the 90-day refresh window. Setup completion now matches old→new accounts by their stable IBAN and calls async_remap_account_ids() to migrate the tx/balance history and per-account refresh state onto the new ids before the prune runs
+- feat(i18n): add wizard.step.3.last_success[_never] and wizard.step.3.refresh_error[_session_expired] to en/es locale files
+- test(manager): add coverage for get_last_success_dates scoping, the global-refresh backfill migration, error classification, get_account_errors scoping, and account-id remap on re-link
+
 ## 0.23.2 — 2026-06-24
 Version: 0.23.2
 Branch: fix/transactions-log-100-cap

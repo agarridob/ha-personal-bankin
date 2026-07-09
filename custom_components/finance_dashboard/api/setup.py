@@ -50,6 +50,8 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
         raw_accounts = entry.data.get("accounts", [])
         manager = _get_manager(hass)
         oldest_dates = manager.get_oldest_transaction_dates() if manager else {}
+        last_success_dates = manager.get_last_success_dates() if manager else {}
+        account_errors = manager.get_account_errors() if manager else {}
         safe_accounts = []
         for acc in raw_accounts:
             iban = acc.get("iban", "")
@@ -67,6 +69,8 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
                     "ha_users": acc.get("ha_users", []),
                     "person": acc.get("person", ""),
                     "oldest_transaction": oldest_dates.get(acc_id),
+                    "last_success_refresh": last_success_dates.get(acc_id),
+                    "refresh_error": (account_errors.get(acc_id) or {}).get("type"),
                 }
             )
 
@@ -435,6 +439,38 @@ class FinanceDashboardSetupCompleteView(HomeAssistantView):
                 # banks, replace accounts that share the same
                 # institution_id (re-auth of same bank).
                 existing_accounts = list(entry.data.get("accounts", []))
+                # Re-auth assigns fresh (session-scoped) ids to the same
+                # physical accounts. Match old→new by the stable IBAN and
+                # migrate the cached transaction history onto the new ids, so
+                # re-linking a bank does not wipe the user's history.
+                old_bank_accounts = [
+                    acc
+                    for acc in existing_accounts
+                    if acc.get("institution_id") == institution_id
+                ]
+                id_remap: dict[str, str] = {}
+                for old in old_bank_accounts:
+                    old_iban = old.get("iban", "")
+                    old_id = old.get("id", "")
+                    if not old_iban or not old_id:
+                        continue
+                    for new in account_config:
+                        if new.get("iban") and new.get("iban") == old_iban:
+                            new_id = new.get("id", "")
+                            if new_id and new_id != old_id:
+                                id_remap[old_id] = new_id
+                            break
+                if id_remap:
+                    manager = _get_manager(hass)
+                    if manager:
+                        try:
+                            await manager.async_remap_account_ids(id_remap)
+                        except Exception:
+                            _LOGGER.warning(
+                                "Failed to migrate transaction history on re-link",
+                                exc_info=True,
+                            )
+
                 existing_accounts = [
                     acc for acc in existing_accounts if acc.get("institution_id") != institution_id
                 ]

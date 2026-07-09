@@ -189,7 +189,7 @@ a:focus:not(:focus-visible),
  */
 const _i18nCache = {};
 
-const _FD_VERSION = "0.23.2";
+const _FD_VERSION = "0.24.0";
 
 async function _loadLocale(lang) {
   if (_i18nCache[lang]) return _i18nCache[lang];
