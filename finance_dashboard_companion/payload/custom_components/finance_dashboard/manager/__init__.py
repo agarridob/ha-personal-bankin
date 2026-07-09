@@ -372,6 +372,48 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                 exc_info=True,
             )
 
+    async def async_remap_account_ids(self, id_remap: dict[str, str]) -> int:
+        """Re-key cached per-account data when a bank re-link assigns new ids.
+
+        Enable Banking account ids are session-scoped, so re-authorizing a bank
+        yields fresh ids for the same physical accounts (see
+        ``_prune_stale_account_cache``). Given an old→new id map — built at the
+        setup layer by matching the stable IBAN — this moves the transaction and
+        balance history (plus per-account refresh state) onto the new ids, so
+        the prune keeps it instead of dropping it and the user does not lose
+        their history on re-link. Persists once if anything moved. Returns the
+        number of accounts migrated.
+        """
+        migrated = 0
+        for old_id, new_id in id_remap.items():
+            if not old_id or not new_id or old_id == new_id:
+                continue
+            if old_id not in self._tx_by_account and old_id not in self._balances:
+                continue
+            if old_id in self._tx_by_account:
+                bucket = self._tx_by_account.pop(old_id)
+                for txn in bucket:
+                    txn["_account_id"] = new_id
+                # Merge in case the new id already has a bucket; the refresh
+                # de-duplicates by transactionId afterwards.
+                self._tx_by_account.setdefault(new_id, []).extend(bucket)
+            for store in (
+                self._balances,
+                self._previous_balances,
+                self._last_success_by_account,
+                self._last_error_by_account,
+            ):
+                if old_id in store:
+                    store[new_id] = store.pop(old_id)
+            migrated += 1
+        if migrated:
+            await self._persist_transactions()
+            _LOGGER.info(
+                "Re-keyed %d account bucket(s) after bank re-link — history preserved",
+                migrated,
+            )
+        return migrated
+
     # ------------------------------------------------------------------
     # Account refresh
     # ------------------------------------------------------------------

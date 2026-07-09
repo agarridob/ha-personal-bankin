@@ -9,8 +9,9 @@ Changes:
 - feat(manager): track the last refresh error per account (_last_error_by_account) with a classified type — session_expired (EXPIRED_SESSION / "Session is expired"), auth_error (401 / INVALID_SESSION) or error — set on failure and cleared on the next success; persisted and exposed via get_account_errors()
 - feat(api): /setup/status now returns last_success_refresh and refresh_error per account alongside oldest_transaction
 - feat(frontend): the "Edit accounts" cards show "Last successful refresh: <datetime>" under "Oldest transaction" (red/bold when older than 48h or never) plus an explicit "⚠ Session expired — reconnect this bank" line when the last refresh failed, so a silently-failing bank like BBVA is obvious and actionable
+- feat(manager): preserve transaction history across a bank re-link. Enable Banking assigns fresh session-scoped account ids on re-auth, so re-linking a bank used to prune the old cache buckets and lose all history older than the 90-day refresh window. Setup completion now matches old→new accounts by their stable IBAN and calls async_remap_account_ids() to migrate the tx/balance history and per-account refresh state onto the new ids before the prune runs
 - feat(i18n): add wizard.step.3.last_success[_never] and wizard.step.3.refresh_error[_session_expired] to en/es locale files
-- test(manager): add coverage for get_last_success_dates scoping, the global-refresh backfill migration, error classification, and get_account_errors scoping
+- test(manager): add coverage for get_last_success_dates scoping, the global-refresh backfill migration, error classification, get_account_errors scoping, and account-id remap on re-link
 
 ## 0.23.2 — 2026-06-24
 Version: 0.23.2

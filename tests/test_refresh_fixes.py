@@ -248,3 +248,63 @@ def test_get_account_errors_scoped_and_typed() -> None:
     assert set(errors) == {"acc-bad"}
     assert errors["acc-bad"]["type"] == "session_expired"
     assert "at" in errors["acc-bad"]
+
+
+# ---------------------------------------------------------------------------
+# Re-link history preservation — re-key cached data onto fresh account ids
+# ---------------------------------------------------------------------------
+
+
+async def test_remap_account_ids_moves_history_and_state() -> None:
+    """Re-keying migrates tx bucket (re-tagged), balances and per-account state."""
+    mgr = _bare_manager()
+    mgr._demo_mode = False
+    mgr._tx_by_account = {
+        "old": [
+            {"transactionId": "t1", "_account_id": "old", "bookingDate": "2026-03-01"},
+        ],
+        "other-bank": [{"transactionId": "z", "_account_id": "other-bank"}],
+    }
+    mgr._balances = {"old": {"balances": []}}
+    mgr._previous_balances = {"old": 12.5}
+    mgr._last_success_by_account = {"old": "2026-07-01T00:00:00+00:00"}
+    mgr._last_error_by_account = {"old": {"type": "session_expired"}}
+
+    persisted: list[bool] = []
+
+    async def _fake_persist() -> None:
+        persisted.append(True)
+
+    mgr._persist_transactions = _fake_persist  # type: ignore[method-assign]
+
+    migrated = await mgr.async_remap_account_ids({"old": "new", "": "x", "same": "same"})
+
+    assert migrated == 1
+    assert "old" not in mgr._tx_by_account
+    assert mgr._tx_by_account["new"][0]["_account_id"] == "new"
+    assert mgr._tx_by_account["new"][0]["transactionId"] == "t1"
+    assert mgr._balances == {"new": {"balances": []}}
+    assert mgr._previous_balances == {"new": 12.5}
+    assert mgr._last_success_by_account == {"new": "2026-07-01T00:00:00+00:00"}
+    assert mgr._last_error_by_account == {"new": {"type": "session_expired"}}
+    assert mgr._tx_by_account["other-bank"], "untouched banks must be preserved"
+    assert persisted == [True]
+
+
+async def test_remap_account_ids_noop_when_nothing_to_move() -> None:
+    """No cached bucket for the old id → no migration, no persist."""
+    mgr = _bare_manager()
+    mgr._tx_by_account = {}
+    mgr._balances = {}
+    mgr._previous_balances = {}
+    mgr._last_success_by_account = {}
+    mgr._last_error_by_account = {}
+
+    async def _fail_persist() -> None:  # pragma: no cover - must not run
+        raise AssertionError("persist must not be called when nothing moved")
+
+    mgr._persist_transactions = _fail_persist  # type: ignore[method-assign]
+
+    migrated = await mgr.async_remap_account_ids({"old": "new"})
+
+    assert migrated == 0
