@@ -80,6 +80,12 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         self._transactions: list[dict[str, Any]] = []
         self._balances: dict[str, Any] = {}
         self._last_refresh: datetime | None = None
+        # Per-account timestamp of the last *successful* transaction fetch
+        # (account_id → ISO string). A live fetch that raises (stale session,
+        # 422, rate-limit) never updates this, so an account whose bank is
+        # failing silently keeps an old timestamp — surfaced in the account
+        # editor so the user notices instead of assuming everything refreshed.
+        self._last_success_by_account: dict[str, str] = {}
         self._rate_limited_until: datetime | None = None
         self._transfer_override_store = Store(hass, 1, STORAGE_KEY_TRANSFER_OVERRIDES)
         self._transfer_overrides: dict[str, bool] = {}
@@ -303,6 +309,11 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             stats = cached.get("last_refresh_stats")
             if isinstance(stats, dict):
                 self._last_refresh_stats = stats
+            last_success = cached.get("last_success_by_account")
+            if isinstance(last_success, dict):
+                self._last_success_by_account = {
+                    str(k): str(v) for k, v in last_success.items() if v
+                }
             self._initial_sync_complete = bool(cached.get("initial_sync_complete", False))
             _LOGGER.info(
                 "Loaded %d cached transactions (last refresh: %s, balances: %d)",
@@ -631,6 +642,19 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             ]
             result[acc_id] = min(dates) if dates else None
         return result
+
+    def get_last_success_dates(self) -> dict[str, str | None]:
+        """Return the last successful transaction fetch per account_id (ISO), or None.
+
+        Pure cache read. Populated by ``async_refresh_transactions`` each time an
+        account's live fetch completes without raising, so a lagging value points
+        at an account whose bank is failing silently.
+        """
+        return {
+            acc_id: self._last_success_by_account.get(acc_id)
+            for acc_id in (acc.get("id") for acc in self._accounts)
+            if acc_id
+        }
 
     def get_cached_transactions(self, limit: int | None = None) -> list[dict[str, Any]]:
         """Get cached transactions (no API call).

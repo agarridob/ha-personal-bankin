@@ -2,7 +2,7 @@
 
 **Your personal finance command center — right inside Home Assistant.**
 
-[![Version](https://img.shields.io/badge/version-0.23.2-blue?style=flat-square)](https://github.com/agarridob/ha-personal-bankin/releases)
+[![Version](https://img.shields.io/badge/version-0.24.0-blue?style=flat-square)](https://github.com/agarridob/ha-personal-bankin/releases)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-compatible-orange?style=flat-square)](https://hacs.xyz)
 [![CI](https://img.shields.io/github/actions/workflow/status/agarridob/ha-personal-bankin/validate.yml?style=flat-square&label=CI)](https://github.com/agarridob/ha-personal-bankin/actions)

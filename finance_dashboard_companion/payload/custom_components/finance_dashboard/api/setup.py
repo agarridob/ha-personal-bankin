@@ -50,6 +50,7 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
         raw_accounts = entry.data.get("accounts", [])
         manager = _get_manager(hass)
         oldest_dates = manager.get_oldest_transaction_dates() if manager else {}
+        last_success_dates = manager.get_last_success_dates() if manager else {}
         safe_accounts = []
         for acc in raw_accounts:
             iban = acc.get("iban", "")
@@ -67,6 +68,7 @@ class FinanceDashboardSetupStatusView(HomeAssistantView):
                     "ha_users": acc.get("ha_users", []),
                     "person": acc.get("person", ""),
                     "oldest_transaction": oldest_dates.get(acc_id),
+                    "last_success_refresh": last_success_dates.get(acc_id),
                 }
             )
 

@@ -50,6 +50,7 @@ class PersistenceMixin:
                     self._rate_limited_until.isoformat() if self._rate_limited_until else None
                 ),
                 "last_refresh_stats": self._last_refresh_stats,
+                "last_success_by_account": self._last_success_by_account,
                 "account_count": len(self._accounts),
                 "initial_sync_complete": self.initial_sync_complete,
             }

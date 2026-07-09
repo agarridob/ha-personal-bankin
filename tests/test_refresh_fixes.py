@@ -164,3 +164,23 @@ def test_ingest_tags_and_keeps_historical_outside_window() -> None:
     assert new["_account_name"] == "My Acct"
     assert new["category"] == "other"
     assert new["_status"] == "booked"
+
+
+# ---------------------------------------------------------------------------
+# Per-account last-successful-refresh tracking
+# ---------------------------------------------------------------------------
+
+
+def test_last_success_dates_scoped_to_linked_accounts() -> None:
+    """Only linked accounts appear; a never-refreshed account maps to None."""
+    mgr = _bare_manager()
+    mgr._accounts = [{"id": "acc-ok"}, {"id": "acc-stale"}]
+    ts = dt_util.now().isoformat()
+    # acc-ok refreshed; acc-stale never did; acc-gone is stale residue and
+    # must not leak into the result once it is no longer linked.
+    mgr._last_success_by_account = {"acc-ok": ts, "acc-gone": ts}
+
+    result = mgr.get_last_success_dates()
+
+    assert result == {"acc-ok": ts, "acc-stale": None}
+    assert "acc-gone" not in result

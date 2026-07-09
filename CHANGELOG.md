@@ -2,6 +2,15 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.24.0] — 2026-07-09
+
+### Added
+- Track the timestamp of the last *successful* transaction fetch per account (_last_success_by_account). A live fetch that raises (stale session, 422, rate-limit) skips the update and keeps the previous timestamp, so an account whose bank is failing silently no longer looks refreshed. Persisted in the transaction cache and surfaced via get_last_success_dates()
+- /setup/status now returns last_success_refresh per account alongside oldest_transaction
+- The "Edit accounts" cards show "Last successful refresh: <datetime>" under "Oldest transaction". The line turns red/bold when the account has not refreshed in over 48h (or never), making a silently-failing bank like BBVA visually obvious
+- Add wizard.step.3.last_success and wizard.step.3.last_success_never to en/es locale files
+- Test(manager): add coverage for get_last_success_dates scoping (linked accounts only, never-refreshed maps to None, unlinked residue excluded)
+
 ## [0.23.2] — 2026-06-24
 
 ### Added

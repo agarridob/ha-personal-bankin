@@ -260,6 +260,10 @@ class RefreshMixin:
 
             accounts_hit += 1
             self._ingest_account_txns(account, account_id, txns, used_from)
+            # Record the successful fetch per account. Accounts that raised
+            # above (stale session, 422, rate-limit) skip this line and keep
+            # their previous timestamp, so a silently-failing bank stands out.
+            self._last_success_by_account[account_id] = dt_util.now().isoformat()
 
         # F10: drop the migration-era __unknown__ bucket after the first
         # successful live refresh — those legacy entries are now superseded
