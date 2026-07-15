@@ -263,9 +263,10 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
 
         category = (call.data.get("category") or "").strip()
         keyword = (call.data.get("keyword") or "").strip()
+        direction = (call.data.get("direction") or "any").strip()
         if not category or not keyword:
             raise HomeAssistantError("category and keyword are required")
-        result = await manager.async_add_categorization_rule(category, keyword)
+        result = await manager.async_add_categorization_rule(category, keyword, direction)
         await coordinator.async_refresh()
         return result
 
@@ -274,9 +275,10 @@ async def _async_register_services(hass: HomeAssistant, manager, coordinator) ->
 
         category = (call.data.get("category") or "").strip()
         keyword = (call.data.get("keyword") or "").strip()
+        direction = (call.data.get("direction") or "any").strip()
         if not category or not keyword:
             raise HomeAssistantError("category and keyword are required")
-        result = await manager.async_remove_categorization_rule(category, keyword)
+        result = await manager.async_remove_categorization_rule(category, keyword, direction)
         await coordinator.async_refresh()
         return result
 

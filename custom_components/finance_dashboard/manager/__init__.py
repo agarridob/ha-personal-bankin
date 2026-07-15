@@ -34,6 +34,8 @@ from homeassistant.util import dt as dt_util
 from ..const import (
     DOMAIN,
     ENABLEBANKING_RATE_LIMIT_DAILY,
+    RULE_DIRECTION_ANY,
+    RULE_DIRECTIONS,
     STORAGE_KEY_CUSTOM_RULES,
     STORAGE_KEY_TRANSFER_OVERRIDES,
 )
@@ -53,6 +55,30 @@ TRANSACTION_CACHE_VERSION = 1
 
 # OAuth state token TTL in seconds (10 minutes) — kept here for test imports
 _OAUTH_STATE_TTL = 600
+
+
+def _coerce_rule_entry(entry: Any) -> str | dict[str, str] | None:
+    """Coerce a custom-rule entry to a JSON-friendly, valid storage form.
+
+    Plain-string keywords stay strings (any direction — backwards-compatible
+    on disk). Direction-scoped rules are normalized to
+    {"keyword", "direction"}. Any-direction dicts collapse back to a plain
+    string so the stored shape stays minimal. Returns None for junk entries.
+    """
+    if isinstance(entry, str):
+        keyword = entry.strip().lower()
+        return keyword or None
+    if isinstance(entry, dict):
+        keyword = str(entry.get("keyword", "")).strip().lower()
+        if not keyword:
+            return None
+        direction = str(entry.get("direction", RULE_DIRECTION_ANY)).strip().lower()
+        if direction not in RULE_DIRECTIONS:
+            direction = RULE_DIRECTION_ANY
+        if direction == RULE_DIRECTION_ANY:
+            return keyword
+        return {"keyword": keyword, "direction": direction}
+    return None
 
 
 class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
@@ -98,7 +124,7 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         # User-added categorization keywords: category → [keywords].
         # Persisted in .storage/ and merged on top of the built-in rules.
         self._custom_rules_store = Store(hass, 1, STORAGE_KEY_CUSTOM_RULES)
-        self._custom_rules: dict[str, list[str]] = {}
+        self._custom_rules: dict[str, list[Any]] = {}
         self._recurring_patterns: list[dict[str, Any]] = []
         self._previous_balances: dict[str, float] = {}
         self._demo_mode: bool = False
@@ -208,9 +234,10 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             stored_rules = await self._custom_rules_store.async_load()
             if isinstance(stored_rules, dict):
                 self._custom_rules = {
-                    str(cat): [str(kw) for kw in kws]
+                    str(cat): sanitized
                     for cat, kws in stored_rules.items()
                     if isinstance(kws, list)
+                    and (sanitized := [e for kw in kws if (e := _coerce_rule_entry(kw))])
                 }
         except (json.JSONDecodeError, ValueError, OSError) as exc:
             _LOGGER.error(
@@ -259,7 +286,9 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
                         "Deduplicated %d duplicate transactions on load "
                         "(total=%d, unique=%d). Same bank account may be "
                         "linked under multiple Enable Banking sessions.",
-                        raw_total - len(deduped), raw_total, len(deduped),
+                        raw_total - len(deduped),
+                        raw_total,
+                        len(deduped),
                     )
                 self._transactions = deduped
                 # Deterministic sort after flatten
@@ -605,45 +634,63 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
         await self._persist_transactions()
         _LOGGER.info("Re-categorized %d transactions", len(self._transactions))
 
-    def get_custom_rules(self) -> dict[str, list[str]]:
-        """Return a copy of the user-added categorization keywords."""
+    def get_custom_rules(self) -> dict[str, list[Any]]:
+        """Return a copy of the user-added categorization rules."""
         return {cat: list(kws) for cat, kws in self._custom_rules.items()}
 
-    async def async_add_categorization_rule(self, category: str, keyword: str) -> dict[str, Any]:
-        """Persist a user-added categorization keyword and re-categorize the cache.
+    async def async_add_categorization_rule(
+        self, category: str, keyword: str, direction: str = RULE_DIRECTION_ANY
+    ) -> dict[str, Any]:
+        """Persist a user-added categorization rule and re-categorize the cache.
 
         Keywords are stored lowercase (matching is a lowercased substring
-        check). Returns the updated custom-rules dict so service callers
-        can surface it as a response.
+        check). ``direction`` scopes the rule to credits, debits, or either,
+        letting the same keyword resolve differently per sign. Returns the
+        updated custom-rules dict so service callers can surface it as a
+        response.
         """
         category = category.strip().lower()
         keyword = keyword.strip().lower()
+        direction = (direction or RULE_DIRECTION_ANY).strip().lower()
+        if direction not in RULE_DIRECTIONS:
+            direction = RULE_DIRECTION_ANY
         if not category or not keyword:
             raise ValueError("category and keyword must be non-empty")
 
-        keywords = self._custom_rules.setdefault(category, [])
-        if keyword not in keywords:
-            keywords.append(keyword)
+        entry = _coerce_rule_entry({"keyword": keyword, "direction": direction})
+        rules = self._custom_rules.setdefault(category, [])
+        if entry not in rules:
+            rules.append(entry)
             await self._custom_rules_store.async_save(self._custom_rules)
             self._rebuild_categorizer()
             await self.async_categorize_transactions()
-            _LOGGER.info("Custom rule added: %s → %s", keyword, category)
+            _LOGGER.info("Custom rule added: %s [%s] → %s", keyword, direction, category)
         return {"custom_rules": self.get_custom_rules()}
 
-    async def async_remove_categorization_rule(self, category: str, keyword: str) -> dict[str, Any]:
-        """Remove a user-added keyword (built-in rules are not affected)."""
+    async def async_remove_categorization_rule(
+        self, category: str, keyword: str, direction: str = RULE_DIRECTION_ANY
+    ) -> dict[str, Any]:
+        """Remove a user-added rule (built-in rules are not affected).
+
+        The ``direction`` must match the stored rule's scope; it defaults to
+        ``any`` so legacy keyword-only removals still work.
+        """
         category = category.strip().lower()
         keyword = keyword.strip().lower()
+        direction = (direction or RULE_DIRECTION_ANY).strip().lower()
+        if direction not in RULE_DIRECTIONS:
+            direction = RULE_DIRECTION_ANY
 
-        keywords = self._custom_rules.get(category, [])
-        if keyword in keywords:
-            keywords.remove(keyword)
-            if not keywords:
+        entry = _coerce_rule_entry({"keyword": keyword, "direction": direction})
+        rules = self._custom_rules.get(category, [])
+        if entry in rules:
+            rules.remove(entry)
+            if not rules:
                 self._custom_rules.pop(category, None)
             await self._custom_rules_store.async_save(self._custom_rules)
             self._rebuild_categorizer()
             await self.async_categorize_transactions()
-            _LOGGER.info("Custom rule removed: %s → %s", keyword, category)
+            _LOGGER.info("Custom rule removed: %s [%s] → %s", keyword, direction, category)
         return {"custom_rules": self.get_custom_rules()}
 
     def _rebuild_categorizer(self) -> None:

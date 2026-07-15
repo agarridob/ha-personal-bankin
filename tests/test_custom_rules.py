@@ -138,3 +138,77 @@ async def test_remove_does_not_affect_builtin_rules():
     # Built-in keyword still matches — removal only targets custom rules
     mgr._categorizer = TransactionCategorizer(custom_rules=mgr.get_custom_rules() or None)
     assert mgr._categorizer.categorize(mgr._transactions[0]) == "groceries"
+
+
+# ---------------------------------------------------------------------------
+# Manager-level: direction-scoped rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_add_debit_rule_stored_as_dict_and_splits_sign():
+    """A debit-scoped rule persists as a dict and only tags debits."""
+    mgr = _make_manager()
+    mgr._transactions = [
+        _txn("MARIANA MOURA", amount="1600.00"),
+        _txn("MARIANA MOURA", amount="-1000.00"),
+    ]
+
+    result = await mgr.async_add_categorization_rule("excluded", "Mariana Moura", "debit")
+
+    # Direction-scoped rule stored as a structured dict
+    assert mgr.get_custom_rules() == {
+        "excluded": [{"keyword": "mariana moura", "direction": "debit"}]
+    }
+    mgr._custom_rules_store.async_save.assert_awaited_once_with(
+        {"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    # +1600 stays income, -1000 becomes excluded
+    assert mgr._transactions[0]["category"] == "income"
+    assert mgr._transactions[1]["category"] == "excluded"
+    assert result == {
+        "custom_rules": {"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    }
+
+
+@pytest.mark.asyncio
+async def test_any_direction_still_stored_as_plain_string():
+    """Any-direction rules keep the legacy plain-string on-disk shape."""
+    mgr = _make_manager()
+
+    await mgr.async_add_categorization_rule("dining", "Bar Pepe")
+
+    assert mgr.get_custom_rules() == {"dining": ["bar pepe"]}
+
+
+@pytest.mark.asyncio
+async def test_credit_and_debit_rules_coexist_for_same_keyword():
+    """The same keyword can carry both a credit and a debit rule."""
+    mgr = _make_manager()
+
+    await mgr.async_add_categorization_rule("income", "acme", "credit")
+    await mgr.async_add_categorization_rule("excluded", "acme", "debit")
+
+    assert mgr.get_custom_rules() == {
+        "income": [{"keyword": "acme", "direction": "credit"}],
+        "excluded": [{"keyword": "acme", "direction": "debit"}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_remove_debit_rule_requires_matching_direction():
+    """Removing needs the direction to match; a bare removal misses it."""
+    mgr = _make_manager()
+    await mgr.async_add_categorization_rule("excluded", "mariana moura", "debit")
+    mgr._custom_rules_store.async_save.reset_mock()
+
+    # Wrong direction (default 'any') → no-op
+    await mgr.async_remove_categorization_rule("excluded", "mariana moura")
+    mgr._custom_rules_store.async_save.assert_not_awaited()
+    assert mgr.get_custom_rules() == {
+        "excluded": [{"keyword": "mariana moura", "direction": "debit"}]
+    }
+
+    # Matching direction → removed
+    await mgr.async_remove_categorization_rule("excluded", "mariana moura", "debit")
+    assert mgr.get_custom_rules() == {}

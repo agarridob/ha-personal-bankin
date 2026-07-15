@@ -141,6 +141,8 @@
   "categorize.filter_label": "Mostrar:",
   "categorize.filter_all": "Todos los movimientos",
   "categorize.filter_empty": "No hay movimientos en esta categoría.",
+  "categorize.direction_credit": "solo ingresos",
+  "categorize.direction_debit": "solo gastos",
   "budget.title": "Configuración del presupuesto",
   "budget.split_model": "Modelo de reparto",
   "budget.preview": "Vista previa del dinero libre",

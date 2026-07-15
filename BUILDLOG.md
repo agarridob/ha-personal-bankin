@@ -1,5 +1,18 @@
 # Build Log
 
+## 0.25.0 — 2026-07-15
+Version: 0.25.0
+Branch: feat/sign-aware-categorization
+Changes:
+- feat(categorizer): make keyword rules direction-aware — a rule can now be scoped to credits (money in), debits (money out) or either. Rules are normalized to (keyword, direction) tuples so the same text can resolve to different categories per sign. Fixes the case where a person's name appears on both an incoming salary and an outgoing transfer to their own untracked account and one keyword rule dragged both into the same bucket
+- feat(categorizer): treat "income" as a credit-only category — a keyword resolving to income never tags a debit (an outgoing amount is never income). A salary/pension keyword on a negative amount now falls through to the debit fallback instead of polluting income
+- feat(manager): async_add/remove_categorization_rule accept a direction argument; direction-scoped rules persist as {"keyword", "direction"} dicts while any-direction rules keep the legacy plain-string on-disk shape (backwards-compatible, no migration). Dedup is keyed on the (keyword, direction) pair so a credit and a debit rule for the same keyword coexist
+- feat(api): the add/remove_categorization_rule services gain an optional "direction" field (any/credit/debit); the category selectors are refreshed to the current taxonomy (groceries/dining/health/leisure/excluded) instead of the stale food-era list
+- feat(frontend): the drag & drop categorizer scopes each learned rule to the sign of the dragged transaction, so dropping an outgoing transfer into "excluded" never re-tags the matching incoming credit; the learned-rules list shows the direction scope
+- feat(i18n): add categorize.direction_credit/_debit to en/es locale files
+- test(categorizer): cover credit-only income, debit/credit-scoped matching, the end-to-end same-name-opposite-sign split, invalid-direction coercion and malformed-entry handling
+- test(manager): cover direction-scoped persistence shape, any-direction plain-string storage, credit+debit coexistence, and direction-matched removal
+
 ## 0.24.0 — 2026-07-09
 Version: 0.24.0
 Branch: feat/per-account-last-success-refresh
