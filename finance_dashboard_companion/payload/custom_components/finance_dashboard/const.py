@@ -4,7 +4,7 @@ DOMAIN = "finance_dashboard"
 PLATFORMS = ["sensor", "number", "select"]
 
 # Version — must match manifest.json and companion config.yaml
-VERSION = "0.24.0"
+VERSION = "0.25.0"
 
 # Panel
 PANEL_URL_PATH = "finance-dashboard"
@@ -48,7 +48,7 @@ DEFAULT_AUTO_REFRESH_HOUR = 6
 
 # Transaction categorization
 CATEGORY_HOUSING = "housing"
-CATEGORY_FOOD = "food"          # legacy alias — kept so cached "food" transactions still resolve
+CATEGORY_FOOD = "food"  # legacy alias — kept so cached "food" transactions still resolve
 CATEGORY_GROCERIES = "groceries"
 CATEGORY_DINING = "dining"
 CATEGORY_TRANSPORT = "transport"
@@ -79,6 +79,19 @@ DEFAULT_CATEGORIES = [
     CATEGORY_EXCLUDED,
     CATEGORY_OTHER,
 ]
+
+# Categorization rule directions — a keyword rule may be scoped to a
+# transaction sign so the same text can resolve to different categories per
+# direction (e.g. a person's name on both an incoming salary and an outgoing
+# transfer to their own untracked account).
+RULE_DIRECTION_ANY = "any"
+RULE_DIRECTION_CREDIT = "credit"  # matches only positive amounts (money in)
+RULE_DIRECTION_DEBIT = "debit"  # matches only negative amounts (money out)
+RULE_DIRECTIONS = (RULE_DIRECTION_ANY, RULE_DIRECTION_CREDIT, RULE_DIRECTION_DEBIT)
+
+# Categories that are inherently credit-only: a keyword resolving here must
+# never tag a debit — an outgoing amount is never "income".
+CREDIT_ONLY_CATEGORIES = {CATEGORY_INCOME}
 
 # Categorization rules — keyword-based auto-detection
 # These are default patterns; users can customize via UI.

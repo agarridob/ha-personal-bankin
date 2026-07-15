@@ -244,11 +244,29 @@ def test_utilities(field, value):
     ],
 )
 def test_income_keyword(field, value):
-    """Transactions with income keywords and negative amounts → income."""
+    """Income keywords on a credit (positive amount) → income."""
     cat = TransactionCategorizer()
-    # Income keywords fire regardless of amount direction
-    result = cat.categorize(_txn(remittance=value, amount=-0.01))
+    result = cat.categorize(_txn(remittance=value, amount=1234.56))
     assert result == "income", f"Expected income for '{value}', got '{result}'"
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("remittance", "NOMINA NOVIEMBRE 2025 EMPRESA SL"),
+        ("remittance", "Salary payment"),
+        ("remittance", "PENSION SEGURIDAD SOC"),
+    ],
+)
+def test_income_keyword_never_tags_debit(field, value):
+    """Income is credit-only: an income keyword on a debit must NOT be income.
+
+    A negative amount is never income even if it carries a salary/pension
+    keyword; it falls through to the debit fallback (other).
+    """
+    cat = TransactionCategorizer()
+    result = cat.categorize(_txn(remittance=value, amount=-0.01))
+    assert result == "other", f"Expected other (debit) for '{value}', got '{result}'"
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +376,78 @@ def test_get_rules_returns_copy():
     rules["groceries"].append("__sentinel__")
     # Internal rules must not be polluted
     assert "__sentinel__" not in cat.get_rules()["groceries"]
+
+
+# ---------------------------------------------------------------------------
+# Direction-aware custom rules (sign-scoped)
+# ---------------------------------------------------------------------------
+
+
+def test_debit_rule_ignores_credit():
+    """A debit-scoped rule must not match a positive (credit) amount."""
+    cat = TransactionCategorizer(
+        custom_rules={"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    # Positive amount → the debit rule is skipped → positive fallback → income
+    result = cat.categorize(_txn(creditor="MARIANA MOURA", amount=1600.0))
+    assert result == "income"
+
+
+def test_debit_rule_matches_debit():
+    """A debit-scoped rule matches a negative (debit) amount."""
+    cat = TransactionCategorizer(
+        custom_rules={"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    result = cat.categorize(_txn(creditor="MARIANA MOURA", amount=-1000.0))
+    assert result == "excluded"
+
+
+def test_credit_rule_ignores_debit():
+    """A credit-scoped rule must not match a negative (debit) amount."""
+    cat = TransactionCategorizer(
+        custom_rules={"income": [{"keyword": "acme corp", "direction": "credit"}]}
+    )
+    result = cat.categorize(_txn(creditor="ACME CORP", amount=-50.0))
+    # Debit + no other match → debit fallback → other
+    assert result == "other"
+
+
+def test_any_direction_string_rule_matches_both_signs():
+    """A plain-string custom rule (any direction) matches both signs."""
+    cat = TransactionCategorizer(custom_rules={"dining": ["pizzeria roma"]})
+    assert cat.categorize(_txn(creditor="Pizzeria Roma", amount=-20.0)) == "dining"
+    assert cat.categorize(_txn(creditor="Pizzeria Roma", amount=20.0)) == "dining"
+
+
+def test_mariana_scenario_splits_by_sign():
+    """The end-to-end Mariana case: same name, opposite signs, split cleanly.
+
+    +1600 salary → income (positive fallback); -1000 transfer to her own
+    untracked account → excluded via a debit-scoped rule. Neither leaks into
+    the other bucket.
+    """
+    cat = TransactionCategorizer(
+        custom_rules={"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    assert cat.categorize(_txn(creditor="MARIANA MOURA", amount=1600.0)) == "income"
+    assert cat.categorize(_txn(creditor="MARIANA MOURA", amount=-1000.0)) == "excluded"
+
+
+def test_invalid_direction_falls_back_to_any():
+    """An unknown direction value is coerced to 'any' (matches both signs)."""
+    cat = TransactionCategorizer(
+        custom_rules={"dining": [{"keyword": "bar pepe", "direction": "sideways"}]}
+    )
+    assert cat.categorize(_txn(creditor="Bar Pepe", amount=-10.0)) == "dining"
+    assert cat.categorize(_txn(creditor="Bar Pepe", amount=10.0)) == "dining"
+
+
+def test_malformed_rule_entries_ignored():
+    """Entries without a keyword are dropped, not crash categorization."""
+    cat = TransactionCategorizer(
+        custom_rules={"dining": [{"direction": "debit"}, "", {"keyword": "  "}, "sushi"]}
+    )
+    assert cat.categorize(_txn(creditor="Sushi Bar", amount=-10.0)) == "dining"
 
 
 # ---------------------------------------------------------------------------

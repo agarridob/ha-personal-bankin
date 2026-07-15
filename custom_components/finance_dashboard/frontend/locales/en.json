@@ -141,6 +141,8 @@
   "categorize.filter_label": "Show:",
   "categorize.filter_all": "All transactions",
   "categorize.filter_empty": "No transactions in this category.",
+  "categorize.direction_credit": "money in only",
+  "categorize.direction_debit": "money out only",
   "budget.title": "Budget configuration",
   "budget.split_model": "Split model",
   "budget.preview": "Spending money preview",

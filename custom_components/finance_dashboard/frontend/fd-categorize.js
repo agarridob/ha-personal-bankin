@@ -158,7 +158,7 @@ class FdCategorize extends HTMLElement {
         el.classList.remove("over");
         try {
           const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-          this._assignCategory(data.creditor, el.dataset.cat);
+          this._assignCategory(data.creditor, el.dataset.cat, data.amount);
           el.querySelector(".cat-hint").textContent =
             window._fd.tSync("categorize.assigned", { name: data.creditor });
         } catch {}
@@ -210,26 +210,32 @@ class FdCategorize extends HTMLElement {
     });
   }
 
-  async _assignCategory(creditor, category) {
+  async _assignCategory(creditor, category, amount) {
+    // Scope the rule to the sign of the dragged transaction so the same
+    // keyword can resolve differently for money in vs. money out (e.g. an
+    // incoming salary vs. an outgoing transfer sharing the payer's name).
+    const amt = parseFloat(amount);
+    const direction = amt > 0 ? "credit" : amt < 0 ? "debit" : "any";
     if (this._hass && creditor) {
       try {
         await this._hass.callService("finance_dashboard", "add_categorization_rule", {
           category,
           keyword: creditor.toLowerCase(),
+          direction,
         });
       } catch (e) {
         console.error("fd-categorize: add_categorization_rule failed:", e);
         return;
       }
     }
-    this._addLearnedRule(creditor, category);
+    this._addLearnedRule(creditor, category, direction);
     // Reload transactions from API so the list reflects the new categorization
     this._load();
   }
 
-  _addLearnedRule(creditor, category) {
+  _addLearnedRule(creditor, category, direction) {
     if (!this._learnedRules) this._learnedRules = [];
-    this._learnedRules.push({ creditor, category, time: new Date().toLocaleTimeString() });
+    this._learnedRules.push({ creditor, category, direction, time: new Date().toLocaleTimeString() });
   }
 
   _renderLearnedRules() {
@@ -240,9 +246,12 @@ class FdCategorize extends HTMLElement {
       return;
     }
     el.innerHTML = `<h4>${window._fd.tSync("categorize.learned_count", { count: this._learnedRules.length })}</h4>` +
-      this._learnedRules.map((r) =>
-        `<div class="fdc-rule">${r.time}: "${r.creditor}" &rarr; ${window._fd.CAT_LABELS[r.category] || r.category}</div>`
-      ).join("");
+      this._learnedRules.map((r) => {
+        const dir = r.direction && r.direction !== "any"
+          ? ` <em>(${window._fd.tSync("categorize.direction_" + r.direction)})</em>`
+          : "";
+        return `<div class="fdc-rule">${r.time}: "${r.creditor}" &rarr; ${window._fd.CAT_LABELS[r.category] || r.category}${dir}</div>`;
+      }).join("");
   }
 
   static getStubConfig() { return {}; }

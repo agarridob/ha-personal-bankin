@@ -5,6 +5,12 @@ into budget categories. Users can customize rules via the UI.
 
 No ML/AI dependencies — pure keyword matching for reliability and
 transparency. Categories are deterministic and auditable.
+
+Rules are direction-aware: a keyword may be scoped to credits (money in),
+debits (money out), or either. This lets the same text resolve to
+different categories depending on the sign — e.g. a person's name that
+appears on both an incoming salary (credit → income) and an outgoing
+transfer to their own untracked account (debit → excluded).
 """
 
 from __future__ import annotations
@@ -12,33 +18,85 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .const import CATEGORIZATION_RULES, CATEGORY_OTHER
+from .const import (
+    CATEGORIZATION_RULES,
+    CATEGORY_OTHER,
+    CREDIT_ONLY_CATEGORIES,
+    RULE_DIRECTION_ANY,
+    RULE_DIRECTION_CREDIT,
+    RULE_DIRECTION_DEBIT,
+    RULE_DIRECTIONS,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_rule(entry: Any) -> tuple[str, str] | None:
+    """Normalize a stored rule entry to a (keyword, direction) tuple.
+
+    Backwards-compatible: a plain string is treated as an any-direction
+    keyword. A dict must carry a "keyword"; its "direction" defaults to
+    "any" and is coerced to a valid value.
+    """
+    if isinstance(entry, str):
+        keyword = entry.strip().lower()
+        return (keyword, RULE_DIRECTION_ANY) if keyword else None
+    if isinstance(entry, dict):
+        keyword = str(entry.get("keyword", "")).strip().lower()
+        if not keyword:
+            return None
+        direction = str(entry.get("direction", RULE_DIRECTION_ANY)).strip().lower()
+        if direction not in RULE_DIRECTIONS:
+            direction = RULE_DIRECTION_ANY
+        return (keyword, direction)
+    return None
+
+
+def _direction_matches(direction: str, amount: float) -> bool:
+    """Return True if a rule's direction is compatible with the amount sign."""
+    if direction == RULE_DIRECTION_CREDIT:
+        return amount > 0
+    if direction == RULE_DIRECTION_DEBIT:
+        return amount < 0
+    return True
 
 
 class TransactionCategorizer:
     """Categorize banking transactions by keyword matching."""
 
-    def __init__(self, custom_rules: dict[str, list[str]] | None = None) -> None:
-        """Initialize with default + optional custom rules."""
-        self._rules = dict(CATEGORIZATION_RULES)
+    def __init__(self, custom_rules: dict[str, list[Any]] | None = None) -> None:
+        """Initialize with default + optional custom rules.
+
+        Rules are stored as {category: [(keyword, direction), ...]}. Custom
+        entries may be plain strings (any direction) or dicts with an explicit
+        direction; both are normalized here.
+        """
+        self._rules: dict[str, list[tuple[str, str]]] = {
+            category: [r for kw in keywords if (r := _normalize_rule(kw))]
+            for category, keywords in CATEGORIZATION_RULES.items()
+        }
         if custom_rules:
-            for category, keywords in custom_rules.items():
-                existing = self._rules.get(category, [])
-                self._rules[category] = list(set(existing + keywords))
+            for category, entries in custom_rules.items():
+                normalized = [r for e in entries if (r := _normalize_rule(e))]
+                if not normalized:
+                    continue
+                existing = self._rules.setdefault(category, [])
+                for rule in normalized:
+                    if rule not in existing:
+                        existing.append(rule)
 
     def categorize(self, transaction: dict[str, Any]) -> str:
         """Categorize a single transaction.
 
-        Checks remittance info, creditor name, and debtor name
-        against keyword patterns.
+        Checks remittance info, creditor name, and debtor name against
+        keyword patterns, honoring each rule's direction scope. A keyword
+        resolving to a credit-only category (e.g. income) never tags a debit.
 
         Args:
             transaction: Transaction object (normalized format)
 
         Returns:
-            Category string (e.g., 'housing', 'food', 'income')
+            Category string (e.g., 'housing', 'dining', 'income')
         """
         # Extract searchable text from transaction
         search_text = self._extract_searchable_text(transaction)
@@ -47,14 +105,21 @@ class TransactionCategorizer:
 
         search_lower = search_text.lower()
 
-        # Check amount direction for income detection
+        # Amount direction drives sign-scoped matching and the income fallback
         amount = float(transaction.get("transactionAmount", {}).get("amount", 0))
 
         # Match against rules
-        for category, keywords in self._rules.items():
-            for keyword in keywords:
-                if keyword.lower() in search_lower:
-                    return category
+        for category, rules in self._rules.items():
+            credit_only = category in CREDIT_ONLY_CATEGORIES
+            for keyword, direction in rules:
+                if keyword not in search_lower:
+                    continue
+                if not _direction_matches(direction, amount):
+                    continue
+                # A credit-only category must never absorb a debit
+                if credit_only and amount <= 0:
+                    continue
+                return category
 
         # Fallback: positive amounts without category → income
         if amount > 0:
@@ -62,14 +127,17 @@ class TransactionCategorizer:
 
         return CATEGORY_OTHER
 
-    def update_rules(self, category: str, keywords: list[str]) -> None:
+    def update_rules(self, category: str, keywords: list[Any]) -> None:
         """Add or update categorization rules for a category."""
-        existing = self._rules.get(category, [])
-        self._rules[category] = list(set(existing + keywords))
+        normalized = [r for kw in keywords if (r := _normalize_rule(kw))]
+        existing = self._rules.setdefault(category, [])
+        for rule in normalized:
+            if rule not in existing:
+                existing.append(rule)
 
-    def get_rules(self) -> dict[str, list[str]]:
+    def get_rules(self) -> dict[str, list[tuple[str, str]]]:
         """Get current categorization rules (deep copy — mutations are safe)."""
-        return {category: list(keywords) for category, keywords in self._rules.items()}
+        return {category: list(rules) for category, rules in self._rules.items()}
 
     @staticmethod
     def _extract_searchable_text(
