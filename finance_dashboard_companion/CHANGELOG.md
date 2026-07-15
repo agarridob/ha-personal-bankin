@@ -29,6 +29,11 @@
 
 
 
+
+## 0.25.3
+- Rebrand the Lovelace card picker names from the generic "Finance" prefix to "Personal Bankin", so they can actually be found when searching the "Add card" dialog. Renamed "Finance — Categorize" → "Personal Bankin — Categorize", "Finance — Budget Config" → "Personal Bankin — Budget Config", "Finance Status Chip" → "Personal Bankin — Status Chip", and the HACS Lovelace card "Finance" → "Personal Bankin"
+- Translate the two remaining German customCards descriptions (status chip, HACS card) to English per the i18n policy
+
 ## 0.25.2
 - Custom (user) rules now take precedence over built-in keyword rules. An explicit assignment — e.g. dragging a transaction to a category — was silently losing to a built-in keyword that appeared in the same text and happened to be evaluated first. Concrete case: assigning an outgoing "mariana moura" transfer to excluded had no effect because the transaction text also carried the built-in "transferencia" keyword, so it resolved to transfers. The categorizer now checks the custom rule set before the built-in set
 - Keep built-in and custom rules in separate dicts (_builtin_rules / _custom_rules) instead of merging them, and evaluate custom first via a shared _match_rules helper; get_rules() still returns the merged view and update_rules() now targets the custom set

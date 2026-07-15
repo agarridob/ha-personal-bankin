@@ -317,7 +317,7 @@ if (!customElements.get("finance-status-chip-editor")) customElements.define("fi
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "finance-status-chip",
-  name: "Finance Status Chip",
-  description: "Zeigt den Aktualisierungsstatus des Finance Dashboard",
+  name: "Personal Bankin — Status Chip",
+  description: "Shows the refresh status of Personal Bankin.",
   preview: true,
 });
