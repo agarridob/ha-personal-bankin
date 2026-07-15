@@ -27,6 +27,14 @@
 
 
 
+
+## 0.25.1
+- Internal transfers between two of the user's own connected accounts now net to zero in the monthly summary. get_effective_transactions previously dropped only the destination inflow and kept the source outflow, so moving e.g. 1000 EUR from a personal account to the shared account wrongly counted a 1000 EUR expense (and inflated the transfers category) instead of cancelling out. The source leg of an internal chain is now excluded too
+- This also removes a latent double-count in real cascades — the source outflow plus the standalone external payment leg were both counted; only the genuine external expense now remains
+- TransferChain gains an "internal" flag (both terminal legs land in connected accounts), propagated to each leg as _transfer_internal via enrich_transactions. A chain whose terminal account is NOT owned falls back to the conservative "keep the source outflow" behaviour so a real external expense is never dropped
+- The summary's excluded_transfers transparency block now mirrors the exclusion rule (adds internal source legs) and sums only outflow legs so a transfer's value is reported once instead of doubled
+- Test(transfer): internal transfer nets both legs, chain flagged internal, external chain keeps its source; end-to-end summary test proving total_expenses excludes the internal transfer while a real expense still counts, plus the rejected-chain path counting both legs again
+
 ## 0.25.0
 - Make keyword rules direction-aware — a rule can now be scoped to credits (money in), debits (money out) or either. Rules are normalized to (keyword, direction) tuples so the same text can resolve to different categories per sign. Fixes the case where a person's name appears on both an incoming salary and an outgoing transfer to their own untracked account and one keyword rule dragged both into the same bucket
 - Treat "income" as a credit-only category — a keyword resolving to income never tags a debit (an outgoing amount is never income). A salary/pension keyword on a negative amount now falls through to the debit fallback instead of polluting income

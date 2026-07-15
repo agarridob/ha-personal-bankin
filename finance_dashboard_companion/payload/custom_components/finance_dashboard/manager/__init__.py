@@ -513,7 +513,8 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             target_month, target_year, cycle_mode, month_start_day
         )
 
-        # Use effective transactions (intermediate chain legs excluded)
+        # Use effective transactions (chain legs excluded — including the
+        # source leg of internal transfers, which net to zero)
         effective = get_effective_transactions(self._transactions)
 
         # Filter for target cycle period
@@ -529,14 +530,23 @@ class FinanceDashboardManager(RefreshMixin, PersistenceMixin):
             for txn in self._transactions
             if self._is_in_range(txn, cycle_start, cycle_end) and txn.get("_status") == "booked"
         ]
+        # Mirror the exclusion rule in get_effective_transactions: intermediate
+        # and destination legs, plus the source leg of an internal transfer.
         excluded_chain_txns = [
             txn
             for txn in all_monthly
-            if txn.get("_transfer_role") in ("intermediate", "destination")
-            and txn.get("_transfer_confirmed") is not False
+            if txn.get("_transfer_confirmed") is not False
+            and (
+                txn.get("_transfer_role") in ("intermediate", "destination")
+                or (txn.get("_transfer_role") == "source" and txn.get("_transfer_internal"))
+            )
         ]
+        # Sum only the outflow (debit) legs so a transfer's value is counted
+        # once — the matching inflow would otherwise double the figure.
         excluded_amount = sum(
-            abs(float(t.get("transactionAmount", {}).get("amount", 0))) for t in excluded_chain_txns
+            abs(float(t.get("transactionAmount", {}).get("amount", 0)))
+            for t in excluded_chain_txns
+            if float(t.get("transactionAmount", {}).get("amount", 0)) < 0
         )
 
         # Group by category

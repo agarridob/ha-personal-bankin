@@ -61,6 +61,10 @@ class TransferChain:
     destination_txn_id: str = ""
     intermediate_txn_ids: list[str] = field(default_factory=list)
     total_confidence: float = 0.0
+    # True when both terminal legs (source outflow, destination inflow) land in
+    # the user's own connected accounts — i.e. the whole chain is money shuffled
+    # between owned accounts and nets to zero, never a real external expense.
+    internal: bool = True
 
 
 @dataclass
@@ -106,6 +110,10 @@ def detect_transfer_chains(
     # Phase B — resolve cascades into chains
     chains = _resolve_chains(pairs, booked)
     _LOGGER.debug("Phase B: resolved %d chains", len(chains))
+
+    # Flag chains whose terminal legs both land in the user's own connected
+    # accounts — those are internal shuffles that must net to zero.
+    _flag_internal_chains(chains, booked, accounts)
 
     # Phase C — detect refunds (independent of chains)
     refunds = _detect_refunds(booked, cfg)
@@ -154,12 +162,14 @@ def enrich_transactions(
             chain, role = chain_lookup[txn_id]
             txn["_transfer_chain_id"] = chain.chain_id
             txn["_transfer_role"] = role
+            txn["_transfer_internal"] = chain.internal
             txn["_transfer_linked_txns"] = [tid for tid in chain.txn_ids if tid != txn_id]
             txn["_transfer_confidence"] = chain.total_confidence
             txn["_transfer_confirmed"] = None  # awaiting user action
         else:
             txn["_transfer_chain_id"] = None
             txn["_transfer_role"] = None
+            txn["_transfer_internal"] = False
             txn["_transfer_linked_txns"] = []
             txn["_transfer_confidence"] = None
             txn["_transfer_confirmed"] = None
@@ -179,15 +189,19 @@ def enrich_transactions(
 def get_effective_transactions(
     transactions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Filter out intermediate and destination legs of transfer chains.
+    """Filter out the legs of transfer chains that must not count in summaries.
 
-    Returns only the transactions that should count in summaries:
-    - Source legs of chains (the real expense/outflow)
+    Returns only the transactions that should count:
     - All non-chain transactions
+    - Source legs of NON-internal chains (a real outflow to an external party)
     - Rejected chains (user said "no") are kept as-is
 
-    Intermediate and destination legs are excluded so money isn't
-    double-counted when it cascades through accounts.
+    Excluded:
+    - Intermediate and destination legs of any chain (double-count guard)
+    - The source leg too when the chain is INTERNAL — money moved between the
+      user's own connected accounts nets to zero, so the outflow is not a real
+      expense. Dropping only the destination inflow (as before) left the source
+      outflow counted, wrongly reducing the balance by the transferred amount.
     """
     effective = []
     for txn in transactions:
@@ -203,7 +217,11 @@ def get_effective_transactions(
         if role in ("intermediate", "destination"):
             continue
 
-        # Source leg or no chain → include
+        # Source leg of an internal transfer → skip too (nets to zero)
+        if role == "source" and txn.get("_transfer_internal"):
+            continue
+
+        # Source leg of an external chain, or no chain → include
         effective.append(txn)
 
     return effective
@@ -520,6 +538,29 @@ def _find_matching_successor(
             if abs((in_date - out_date).days) <= TRANSFER_TIME_WINDOW_DAYS:
                 return pair
     return None
+
+
+def _flag_internal_chains(
+    chains: list[TransferChain],
+    transactions: list[dict[str, Any]],
+    accounts: list[dict[str, Any]],
+) -> None:
+    """Mark each chain internal when both terminal legs are owned accounts.
+
+    A chain is internal when its source-outflow and destination-inflow accounts
+    both belong to the user's connected accounts — money that only moved between
+    owned accounts and must net to zero in summaries. In practice the pair
+    detector only ever links two connected accounts, so this is almost always
+    True; the check stays explicit so an unexpected external leg falls back to
+    the conservative "keep the source outflow" behaviour instead of silently
+    dropping a real expense.
+    """
+    connected = {str(acc.get("id")) for acc in accounts if acc.get("id")}
+    txn_account = {t.get("transactionId", ""): t.get("_account_id", "") for t in transactions}
+    for chain in chains:
+        source_acc = txn_account.get(chain.source_txn_id, "")
+        dest_acc = txn_account.get(chain.destination_txn_id, "")
+        chain.internal = source_acc in connected and dest_acc in connected
 
 
 def _build_chain(

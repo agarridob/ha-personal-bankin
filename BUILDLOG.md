@@ -1,5 +1,15 @@
 # Build Log
 
+## 0.25.1 — 2026-07-15
+Version: 0.25.1
+Branch: feat/internal-transfer-net-zero
+Changes:
+- fix(transfer): internal transfers between two of the user's own connected accounts now net to zero in the monthly summary. get_effective_transactions previously dropped only the destination inflow and kept the source outflow, so moving e.g. 1000 EUR from a personal account to the shared account wrongly counted a 1000 EUR expense (and inflated the transfers category) instead of cancelling out. The source leg of an internal chain is now excluded too
+- fix(transfer): this also removes a latent double-count in real cascades — the source outflow plus the standalone external payment leg were both counted; only the genuine external expense now remains
+- feat(transfer): TransferChain gains an "internal" flag (both terminal legs land in connected accounts), propagated to each leg as _transfer_internal via enrich_transactions. A chain whose terminal account is NOT owned falls back to the conservative "keep the source outflow" behaviour so a real external expense is never dropped
+- fix(manager): the summary's excluded_transfers transparency block now mirrors the exclusion rule (adds internal source legs) and sums only outflow legs so a transfer's value is reported once instead of doubled
+- test(transfer): internal transfer nets both legs, chain flagged internal, external chain keeps its source; end-to-end summary test proving total_expenses excludes the internal transfer while a real expense still counts, plus the rejected-chain path counting both legs again
+
 ## 0.25.0 — 2026-07-15
 Version: 0.25.0
 Branch: feat/sign-aware-categorization
