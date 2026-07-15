@@ -451,6 +451,49 @@ def test_malformed_rule_entries_ignored():
 
 
 # ---------------------------------------------------------------------------
+# Custom rules take precedence over built-in rules
+# ---------------------------------------------------------------------------
+
+
+def test_custom_rule_wins_over_builtin_keyword():
+    """An explicit custom rule beats a built-in keyword in the same text.
+
+    The transaction text carries the built-in 'transferencia' keyword AND the
+    user's custom keyword; the custom assignment must win.
+    """
+    cat = TransactionCategorizer(
+        custom_rules={"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    txn = _txn(
+        remittance="TRANSFERENCIA A MARIANA MOURA",
+        amount=-1000.0,
+    )
+    # Without precedence this would match the built-in 'transferencia' → transfers
+    assert cat.categorize(txn) == "excluded"
+
+
+def test_builtin_still_applies_without_custom_match():
+    """Built-in rules still fire when no custom rule matches."""
+    cat = TransactionCategorizer(
+        custom_rules={"excluded": [{"keyword": "mariana moura", "direction": "debit"}]}
+    )
+    txn = _txn(remittance="TRANSFERENCIA A OTRA PERSONA", amount=-500.0)
+    assert cat.categorize(txn) == "transfers"
+
+
+def test_custom_credit_only_debit_falls_through_to_builtin():
+    """A skipped custom income rule still lets built-in rules match.
+
+    income is credit-only, so a debit custom income rule is skipped; the
+    built-in transfers keyword in the same text then applies.
+    """
+    cat = TransactionCategorizer(custom_rules={"income": ["mariana moura"]})
+    txn = _txn(remittance="TRASPASO MARIANA MOURA", amount=-1000.0)
+    # income skipped (credit-only + debit) → built-in transfers matches
+    assert cat.categorize(txn) == "transfers"
+
+
+# ---------------------------------------------------------------------------
 # Case-insensitivity
 # ---------------------------------------------------------------------------
 

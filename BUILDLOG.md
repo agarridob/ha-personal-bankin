@@ -1,5 +1,13 @@
 # Build Log
 
+## 0.25.2 — 2026-07-15
+Version: 0.25.2
+Branch: feat/custom-rules-priority
+Changes:
+- fix(categorizer): custom (user) rules now take precedence over built-in keyword rules. An explicit assignment — e.g. dragging a transaction to a category — was silently losing to a built-in keyword that appeared in the same text and happened to be evaluated first. Concrete case: assigning an outgoing "mariana moura" transfer to excluded had no effect because the transaction text also carried the built-in "transferencia" keyword, so it resolved to transfers. The categorizer now checks the custom rule set before the built-in set
+- refactor(categorizer): keep built-in and custom rules in separate dicts (_builtin_rules / _custom_rules) instead of merging them, and evaluate custom first via a shared _match_rules helper; get_rules() still returns the merged view and update_rules() now targets the custom set
+- test(categorizer): custom rule wins over a built-in keyword in the same text; built-in still applies when no custom rule matches; a skipped credit-only custom rule still falls through to built-in detection
+
 ## 0.25.1 — 2026-07-15
 Version: 0.25.1
 Branch: feat/internal-transfer-net-zero

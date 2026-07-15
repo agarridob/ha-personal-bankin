@@ -28,6 +28,12 @@
 
 
 
+
+## 0.25.2
+- Custom (user) rules now take precedence over built-in keyword rules. An explicit assignment — e.g. dragging a transaction to a category — was silently losing to a built-in keyword that appeared in the same text and happened to be evaluated first. Concrete case: assigning an outgoing "mariana moura" transfer to excluded had no effect because the transaction text also carried the built-in "transferencia" keyword, so it resolved to transfers. The categorizer now checks the custom rule set before the built-in set
+- Keep built-in and custom rules in separate dicts (_builtin_rules / _custom_rules) instead of merging them, and evaluate custom first via a shared _match_rules helper; get_rules() still returns the merged view and update_rules() now targets the custom set
+- Test(categorizer): custom rule wins over a built-in keyword in the same text; built-in still applies when no custom rule matches; a skipped credit-only custom rule still falls through to built-in detection
+
 ## 0.25.1
 - Internal transfers between two of the user's own connected accounts now net to zero in the monthly summary. get_effective_transactions previously dropped only the destination inflow and kept the source outflow, so moving e.g. 1000 EUR from a personal account to the shared account wrongly counted a 1000 EUR expense (and inflated the transfers category) instead of cancelling out. The source leg of an internal chain is now excluded too
 - This also removes a latent double-count in real cascades — the source outflow plus the standalone external payment leg were both counted; only the genuine external expense now remains
