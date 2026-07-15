@@ -128,6 +128,6 @@ if (!customElements.get("fd-budget-config")) customElements.define("fd-budget-co
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "fd-budget-config",
-  name: "Finance — Budget Config",
+  name: "Personal Bankin — Budget Config",
   description: "Configure household budget split model and preview Spielgeld.",
 });

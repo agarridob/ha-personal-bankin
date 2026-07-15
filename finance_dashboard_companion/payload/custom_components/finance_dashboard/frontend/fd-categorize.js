@@ -262,6 +262,6 @@ if (!customElements.get("fd-categorize")) customElements.define("fd-categorize",
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "fd-categorize",
-  name: "Finance — Categorize",
+  name: "Personal Bankin — Categorize",
   description: "Drag & drop transaction categorization (admin only).",
 });

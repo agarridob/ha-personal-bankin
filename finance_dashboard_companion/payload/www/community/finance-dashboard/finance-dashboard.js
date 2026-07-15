@@ -169,6 +169,6 @@ customElements.define("finance-dashboard-card", FinanceDashboardCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "finance-dashboard-card",
-  name: "Finance",
-  description: "Kontostand und Transaktionen auf einen Blick.",
+  name: "Personal Bankin",
+  description: "Account balances and transactions at a glance.",
 });

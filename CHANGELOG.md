@@ -2,6 +2,12 @@
 
 All notable changes to the Finance will be documented in this file.
 
+## [0.25.3] — 2026-07-15
+
+### Fixed
+- Rebrand the Lovelace card picker names from the generic "Finance" prefix to "Personal Bankin", so they can actually be found when searching the "Add card" dialog. Renamed "Finance — Categorize" → "Personal Bankin — Categorize", "Finance — Budget Config" → "Personal Bankin — Budget Config", "Finance Status Chip" → "Personal Bankin — Status Chip", and the HACS Lovelace card "Finance" → "Personal Bankin"
+- Translate the two remaining German customCards descriptions (status chip, HACS card) to English per the i18n policy
+
 ## [0.25.2] — 2026-07-15
 
 ### Changed
