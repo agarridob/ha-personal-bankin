@@ -242,15 +242,42 @@ class TestOverride:
         assert "out-1" in effective_ids
         assert "in-1" in effective_ids
 
-    def test_confirmed_chain_excludes_destination(self):
-        """With no override (None), destination leg must be excluded from effective."""
+    def test_confirmed_internal_transfer_nets_to_zero(self):
+        """An internal transfer (both accounts owned) excludes BOTH legs.
+
+        acc-a and acc-b are the user's own connected accounts, so the outgoing
+        source and the incoming destination cancel — neither counts.
+        """
         txns, _chains = self._setup()
         # No override applied — default None
         effective = get_effective_transactions(txns)
         effective_ids = {t["transactionId"] for t in effective}
-        # source must be counted, destination must be excluded
-        assert "out-1" in effective_ids
+        assert "out-1" not in effective_ids
         assert "in-1" not in effective_ids
+
+    def test_simple_transfer_flagged_internal(self):
+        """Both terminal accounts owned → chain marked internal."""
+        _txns, chains = self._setup()
+        assert chains[0].internal is True
+
+    def test_external_chain_source_kept(self):
+        """When the destination account is NOT owned, keep the source outflow.
+
+        Conservative fallback: if a chain's terminal leg lands outside the
+        user's connected accounts, the source is a real expense and must count.
+        """
+        txns = [
+            _txn("out-1", "acc-a", -50.00, creditor="acc-b", account_name="Account A"),
+            _txn("in-1", "acc-b", 50.00, debtor="Account A", account_name="Account B"),
+        ]
+        # Only acc-a is a connected account — acc-b is external
+        accounts = [_account("acc-a", "Account A")]
+        chains, refunds = detect_transfer_chains(txns, accounts)
+        enrich_transactions(txns, chains, refunds)
+        assert chains[0].internal is False
+        effective_ids = {t["transactionId"] for t in get_effective_transactions(txns)}
+        assert "out-1" in effective_ids  # real outflow kept
+        assert "in-1" not in effective_ids  # destination still dropped
 
 
 # ---------------------------------------------------------------------------
